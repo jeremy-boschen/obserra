@@ -235,10 +235,10 @@ public class KubernetesServiceDiscovery {
         service.setClusterDns(clusterDns);
         service.setActuatorUrl(actuatorUrl);
         service.setRegistrationSource(RegistrationSource.KUBERNETES);
-        service.setHealthCheckPath("/actuator/health");
-        service.setMetricsPath("/actuator/metrics");
-        service.setLogsPath("/actuator/logfile");
-        service.setConfigPath("/actuator/env");
+//        service.setHealthCheckPath("/actuator/health");
+//        service.setMetricsPath("/actuator/metrics");
+//        service.setLogsPath("/actuator/logfile");
+//        service.setConfigPath("/actuator/env");
         
         // Register the service
         Service registeredService = storage.createService(service);

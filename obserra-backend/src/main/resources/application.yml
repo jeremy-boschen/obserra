@@ -1,5 +1,7 @@
 # Server configuration
 server:
+  http2:
+    enabled: true
   port: 5000
   servlet:
     context-path: /
@@ -58,28 +60,24 @@ logging:
 
 # Application-specific configuration
 obserra:
-  # Health check configuration
-  health-check:
-    interval-ms: 30000
-    timeout-ms: 5000
-    retry-delay-ms: 5000
+  collectors:
+    spring-boot:
+      enabled: true
+      timeout: 5s
+      check-interval: 30s
 
-  # Metrics collection configuration
-  metrics:
-    interval-ms: 30000
+      health:
+        check-interval: 15s
+        show-components: true
 
-  # Service discovery configuration
-  service-discovery:
-    interval-ms: 60000
+
     kubernetes:
       enabled: false
 
-  # Logs configuration
-  logs:
-    recent-limit: 100
-    websocket-enabled: true
+  # Service discovery configuration
+  service-discovery:
+    interval: 6s
+    timeout: 5s
+    kubernetes:
+      enabled: false
 
-  # Server configuration
-  server:
-    host: 0.0.0.0
-    port: 5000

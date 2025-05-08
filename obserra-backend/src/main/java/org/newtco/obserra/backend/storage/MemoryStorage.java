@@ -1,7 +1,6 @@
 package org.newtco.obserra.backend.storage;
 
 import org.newtco.obserra.backend.model.*;
-import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -76,12 +75,12 @@ public class MemoryStorage implements Storage {
         service.setId(currentServiceId++);
         service.setLastUpdated(LocalDateTime.now());
         services.put(service.getId(), service);
-        
+
         // Initialize empty lists for metrics and logs
         metrics.put(service.getId(), new ArrayList<>());
         logs.put(service.getId(), new ArrayList<>());
         configProperties.put(service.getId(), new ArrayList<>());
-        
+
         return service;
     }
 
@@ -91,7 +90,7 @@ public class MemoryStorage implements Storage {
         if (existingService == null) {
             throw new IllegalArgumentException("Service not found with id: " + id);
         }
-        
+
         updatedService.setId(id);
         updatedService.setLastUpdated(LocalDateTime.now());
         services.put(id, updatedService);
@@ -104,7 +103,7 @@ public class MemoryStorage implements Storage {
         if (service == null) {
             throw new IllegalArgumentException("Service not found with id: " + id);
         }
-        
+
         service.setStatus(status);
         service.setLastUpdated(LocalDateTime.now());
         return service;
@@ -116,7 +115,7 @@ public class MemoryStorage implements Storage {
         if (service == null) {
             throw new IllegalArgumentException("Service not found with id: " + id);
         }
-        
+
         service.setLastSeen(LocalDateTime.now());
         return service;
     }
@@ -129,16 +128,23 @@ public class MemoryStorage implements Storage {
         configProperties.remove(id);
     }
 
+    @Override
+    public Service persistServiceData(Service service) {
+        // For MemoryStorage, this is a no-op since the service data is already stored in memory
+        // In a database implementation, this would persist the service data to the database
+        return service;
+    }
+
     // Service registration methods
     @Override
     public Service registerService(Service registration) {
         // Check if this service has already registered with an appId
         Optional<Service> existingService = Optional.empty();
-        
+
         if (registration.getAppId() != null) {
             existingService = getServiceByAppId(registration.getAppId());
         }
-        
+
         // Update or create service
         if (existingService.isPresent()) {
             return updateService(existingService.get().getId(), registration);
@@ -155,7 +161,7 @@ public class MemoryStorage implements Storage {
     @Override
     public List<Service> getServicesForHealthCheck(int maxAgeSeconds) {
         LocalDateTime cutoffTime = LocalDateTime.now().minusSeconds(maxAgeSeconds);
-        
+
         return services.values().stream()
                 .filter(service -> {
                     // Skip services that don't need checking
@@ -164,14 +170,14 @@ public class MemoryStorage implements Storage {
                         service.getLastSeen().isBefore(cutoffTime)) {
                         return false;
                     }
-                    
+
                     // Check based on interval if specified
-                    if (service.getHealthCheckInterval() != null && service.getLastSeen() != null) {
+                    if (service.getCheckInterval() != null && service.getLastSeen() != null) {
                         LocalDateTime nextCheckTime = service.getLastSeen()
-                                .plusSeconds(service.getHealthCheckInterval());
+                                .plus(service.getCheckInterval());
                         return LocalDateTime.now().isAfter(nextCheckTime);
                     }
-                    
+
                     // Default: check services that haven't been checked recently
                     return service.getLastSeen() == null || service.getLastSeen().isBefore(cutoffTime);
                 })
@@ -182,7 +188,7 @@ public class MemoryStorage implements Storage {
     @Override
     public List<Metric> getMetricsForService(Long serviceId, int limit) {
         List<Metric> serviceMetrics = metrics.getOrDefault(serviceId, new ArrayList<>());
-        
+
         // Return the most recent metrics first
         return serviceMetrics.stream()
                 .sorted(Comparator.comparing(Metric::getTimestamp).reversed())
@@ -196,10 +202,10 @@ public class MemoryStorage implements Storage {
         if (metric.getTimestamp() == null) {
             metric.setTimestamp(LocalDateTime.now());
         }
-        
+
         List<Metric> serviceMetrics = metrics.computeIfAbsent(metric.getServiceId(), k -> new ArrayList<>());
         serviceMetrics.add(metric);
-        
+
         return metric;
     }
 
@@ -207,7 +213,7 @@ public class MemoryStorage implements Storage {
     @Override
     public List<Log> getLogsForService(Long serviceId, int limit) {
         List<Log> serviceLogs = logs.getOrDefault(serviceId, new ArrayList<>());
-        
+
         // Return the most recent logs first
         return serviceLogs.stream()
                 .sorted(Comparator.comparing(Log::getTimestamp).reversed())
@@ -221,10 +227,10 @@ public class MemoryStorage implements Storage {
         if (log.getTimestamp() == null) {
             log.setTimestamp(LocalDateTime.now());
         }
-        
+
         List<Log> serviceLogs = logs.computeIfAbsent(log.getServiceId(), k -> new ArrayList<>());
         serviceLogs.add(log);
-        
+
         return log;
     }
 
@@ -248,11 +254,11 @@ public class MemoryStorage implements Storage {
         if (property.getLastUpdated() == null) {
             property.setLastUpdated(LocalDateTime.now());
         }
-        
+
         List<ConfigProperty> serviceProperties = configProperties.computeIfAbsent(
                 property.getServiceId(), k -> new ArrayList<>());
         serviceProperties.add(property);
-        
+
         return property;
     }
 
@@ -270,7 +276,7 @@ public class MemoryStorage implements Storage {
                 }
             }
         }
-        
+
         throw new IllegalArgumentException("Config property not found with id: " + id);
     }
 

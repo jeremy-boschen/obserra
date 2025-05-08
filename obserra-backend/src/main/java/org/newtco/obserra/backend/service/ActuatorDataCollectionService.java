@@ -1,8 +1,10 @@
 package org.newtco.obserra.backend.service;
 
-import org.newtco.obserra.backend.collector.ActuatorEndpointCollector;
+import org.newtco.obserra.backend.collector.actuator.ActuatorCollector;
+import org.newtco.obserra.backend.collector.actuator.DiscoveryService;
 import org.newtco.obserra.backend.model.ActuatorEndpoint;
 import org.newtco.obserra.backend.model.Service;
+import org.newtco.obserra.backend.model.ServiceStatus;
 import org.newtco.obserra.backend.storage.Storage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -24,24 +27,24 @@ public class ActuatorDataCollectionService {
 
     private static final Logger logger = LoggerFactory.getLogger(ActuatorDataCollectionService.class);
 
-    private final Storage storage;
-    private final Map<String, ActuatorEndpointCollector> collectors;
-    private final ActuatorEndpointDiscoveryService discoveryService;
+    private final Storage                        storage;
+    private final Map<String, ActuatorCollector> collectors;
+    private final DiscoveryService               discoveryService;
 
     @Autowired
     public ActuatorDataCollectionService(
             Storage storage,
-            List<ActuatorEndpointCollector> collectorList,
-            ActuatorEndpointDiscoveryService discoveryService) {
+            List<ActuatorCollector> collectorList,
+            DiscoveryService discoveryService) {
         this.storage = storage;
         this.discoveryService = discoveryService;
 
         // Map collectors by endpoint type for easy lookup
         this.collectors = collectorList.stream()
-                .collect(Collectors.toMap(ActuatorEndpointCollector::getEndpointType, Function.identity()));
+                .collect(Collectors.toMap(ActuatorCollector::getType, Function.identity()));
 
-        logger.info("Initialized with {} collectors: {}", collectors.size(), 
-                collectors.keySet().stream().collect(Collectors.joining(", ")));
+        logger.info("Initialized with {} collectors: {}", collectors.size(),
+                    String.join(", ", collectors.keySet()));
     }
 
     /**
@@ -77,7 +80,7 @@ public class ActuatorDataCollectionService {
 
             // Try to discover endpoints if none are available
             try {
-                endpoints = discoveryService.discoverEndpoints(service);
+                endpoints = discoveryService.discoverServiceEndpoints(service);
                 if (!endpoints.isEmpty()) {
                     service.setActuatorEndpoints(endpoints);
                     service = storage.updateService(service.getId(), service);
@@ -94,22 +97,82 @@ public class ActuatorDataCollectionService {
 
         // Process each endpoint with the appropriate collector
         for (ActuatorEndpoint endpoint : endpoints) {
-            ActuatorEndpointCollector collector = collectors.get(endpoint.getId());
+            ActuatorCollector collector = collectors.get(endpoint.getType());
             if (collector != null) {
                 try {
-                    boolean success = collector.collectData(service, endpoint);
-                    if (success) {
+                    CollectorState state = collector.collect(service, endpoint);
+                    if (state != null) {
+                        updateServiceWithCollectorState(service, endpoint.getType(), state);
                         anySuccess = true;
                     }
                 } catch (Exception e) {
-                    logger.error("Error collecting data from endpoint {} for service {}: {}", 
-                            endpoint.getId(), service.getName(), e.getMessage());
+                    logger.error("Error collecting data from endpoint {} for service {}: {}",
+                                 endpoint.getType(), service.getName(), e.getMessage());
                 }
             } else {
-                logger.debug("No collector available for endpoint type: {}", endpoint.getId());
+                logger.debug("No collector available for endpoint type: {}", endpoint.getType());
             }
         }
 
         return anySuccess;
+    }
+
+    /**
+     * Update a service with the data from a collector state.
+     *
+     * @param service The service to update
+     * @param collectorType The type of collector that produced the state
+     * @param state The collector state containing the data
+     */
+    private void updateServiceWithCollectorState(Service service, String collectorType, CollectorState state) {
+        if (state == null) {
+            return;
+        }
+
+        // Update common service fields
+        service.setLastSeen(LocalDateTime.now());
+        service.setLastUpdated(LocalDateTime.now());
+
+        // Handle specific collector types
+        switch (collectorType) {
+            case "health" -> updateServiceWithHealthState(service, state);
+            case "metrics" -> updateServiceWithMetricsState(service, state);
+            case "logging" -> updateServiceWithLogsState(service, state);
+            // Add cases for other collector types as they are implemented
+            default -> logger.debug("No specific handler for collector type: {}", collectorType);
+        }
+
+        // Persist the service data
+        storage.persistServiceData(service);
+    }
+
+    /**
+     * Update a service with health data from a collector state.
+     *
+     * @param service The service to update
+     * @param state The collector state containing health data
+     */
+    @SuppressWarnings("unchecked")
+    private void updateServiceWithHealthState(Service service, CollectorState state) {
+        if (state.data() instanceof Map) {
+            Map<String, Object> healthData = (Map<String, Object>) state.data();
+
+            // Update service status if available
+            if (healthData.containsKey("serviceStatus") && healthData.get("serviceStatus") instanceof ServiceStatus) {
+                ServiceStatus serviceStatus = (ServiceStatus) healthData.get("serviceStatus");
+                if (service.getStatus() != serviceStatus) {
+                    logger.info("Service {} status changed from {} to {}",
+                                service.getName(), service.getStatus(), serviceStatus);
+                }
+                service.setStatus(serviceStatus);
+            }
+
+            // Update service data with health information
+            service.getServiceData()
+                   .setHealthStatus(state.status())
+                   .setHealthDetails(healthData.containsKey("details") ? 
+                                    (com.fasterxml.jackson.databind.JsonNode) healthData.get("details") : null)
+                   .setHealthLastChecked(LocalDateTime.now());
+        }
     }
 }
