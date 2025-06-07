@@ -1,22 +1,27 @@
 package org.newtco.obserra.backend.controller;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.newtco.obserra.backend.collector.CollectorServiceImpl;
 import org.newtco.obserra.backend.model.Log;
 import org.newtco.obserra.backend.model.Metric;
 import org.newtco.obserra.backend.model.Service;
-import org.newtco.obserra.backend.service.ActuatorDataCollectionService;
 import org.newtco.obserra.backend.storage.Storage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Controller for metrics and logs.
@@ -28,15 +33,15 @@ public class MetricsAndLogsController {
 
     private static final Logger logger = LoggerFactory.getLogger(MetricsAndLogsController.class);
 
-    private final Storage storage;
-    private final ActuatorDataCollectionService dataCollectionService;
+    private final Storage              storage;
+    private final CollectorServiceImpl dataCollectorService;
 
     @Autowired
     public MetricsAndLogsController(
             Storage storage,
-            ActuatorDataCollectionService dataCollectionService) {
-        this.storage = storage;
-        this.dataCollectionService = dataCollectionService;
+            CollectorServiceImpl dataCollectorService) {
+        this.storage              = storage;
+        this.dataCollectorService = dataCollectorService;
     }
 
     /**
@@ -48,7 +53,7 @@ public class MetricsAndLogsController {
      */
     @GetMapping("/services/{id}/metrics")
     public ResponseEntity<?> getServiceMetrics(
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestParam(required = false, defaultValue = "10") int limit) {
         try {
             Optional<Service> service = storage.getService(id);
@@ -79,7 +84,7 @@ public class MetricsAndLogsController {
      */
     @GetMapping("/services/{id}/logs")
     public ResponseEntity<?> getServiceLogs(
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestParam(required = false, defaultValue = "100") int limit) {
         try {
             Optional<Service> service = storage.getService(id);
@@ -105,7 +110,7 @@ public class MetricsAndLogsController {
      * @return the updated service status
      */
     @PostMapping("/services/{id}/health-check")
-    public ResponseEntity<?> triggerHealthCheck(@PathVariable Long id) {
+    public ResponseEntity<?> triggerHealthCheck(@PathVariable String id) {
         try {
             Optional<Service> serviceOpt = storage.getService(id);
             if (!serviceOpt.isPresent()) {
@@ -114,7 +119,7 @@ public class MetricsAndLogsController {
             }
 
             Service service = serviceOpt.get();
-            boolean success = dataCollectionService.collectServiceData(service);
+            dataCollectorService.collectServiceDataNow(service);
 
             // Get the updated service
             serviceOpt = storage.getService(id);
@@ -145,7 +150,7 @@ public class MetricsAndLogsController {
      * @return the collected metrics
      */
     @PostMapping("/services/{id}/collect-metrics")
-    public ResponseEntity<?> triggerMetricsCollection(@PathVariable Long id) {
+    public ResponseEntity<?> triggerMetricsCollection(@PathVariable String id) {
         try {
             Optional<Service> serviceOpt = storage.getService(id);
             if (!serviceOpt.isPresent()) {
@@ -154,12 +159,8 @@ public class MetricsAndLogsController {
             }
 
             Service service = serviceOpt.get();
-            boolean success = dataCollectionService.collectServiceData(service);
+            dataCollectorService.collectServiceDataNow(service);
 
-            if (!success) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(Map.of("error", "Failed to collect metrics"));
-            }
 
             // Get the latest metrics
             List<Metric> metrics = storage.getMetricsForService(id, 1);
@@ -183,7 +184,7 @@ public class MetricsAndLogsController {
      * @return the collected logs
      */
     @PostMapping("/services/{id}/collect-logs")
-    public ResponseEntity<?> triggerLogsCollection(@PathVariable Long id) {
+    public ResponseEntity<?> triggerLogsCollection(@PathVariable String id) {
         try {
             Optional<Service> serviceOpt = storage.getService(id);
             if (!serviceOpt.isPresent()) {
@@ -192,12 +193,7 @@ public class MetricsAndLogsController {
             }
 
             Service service = serviceOpt.get();
-            boolean success = dataCollectionService.collectServiceData(service);
-
-            if (!success) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(Map.of("error", "Failed to collect logs"));
-            }
+            dataCollectorService.collectServiceDataNow(service);
 
             // Get the latest logs
             List<Log> logs = storage.getLogsForService(id, 10);

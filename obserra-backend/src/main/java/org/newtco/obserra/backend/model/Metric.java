@@ -9,8 +9,8 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public class Metric {
 
-    private Long id;
-    private Long serviceId;
+    private String id;
+    private String serviceId;
     private LocalDateTime timestamp = LocalDateTime.now();
     private Float memoryUsed;
     private Float memoryMax;
@@ -20,19 +20,19 @@ public class Metric {
 
     // Getters and Setters
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public Long getServiceId() {
+    public String getServiceId() {
         return serviceId;
     }
 
-    public void setServiceId(Long serviceId) {
+    public void setServiceId(String serviceId) {
         this.serviceId = serviceId;
     }
 

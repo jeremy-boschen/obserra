@@ -1,9 +1,9 @@
 package org.newtco.bootmonitoring;
 
+import java.time.Duration;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
-
-import java.time.Duration;
 
 /**
  * Configuration properties for the Spring Boot Monitor Client
@@ -54,6 +54,11 @@ public class MonitorProperties {
      * Whether to auto-register with the dashboard on startup
      */
     private boolean autoRegister = true;
+
+    /**
+     * How often to update the registration with the dashboard. A duration of 0 disables updates.
+     */
+    private Duration updateInterval = Duration.ZERO;
 
     /**
      * Interval in milliseconds for the backend to service
@@ -120,6 +125,15 @@ public class MonitorProperties {
 
     public MonitorProperties setAutoRegister(boolean autoRegister) {
         this.autoRegister = autoRegister;
+        return this;
+    }
+
+    public Duration getUpdateInterval() {
+        return updateInterval;
+    }
+
+    public MonitorProperties setUpdateInterval(Duration updateInterval) {
+        this.updateInterval = updateInterval;
         return this;
     }
 

@@ -1,5 +1,11 @@
 package org.newtco.obserra.backend.service;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.newtco.obserra.backend.model.Logger;
 import org.newtco.obserra.backend.model.LoggerLevel;
 import org.newtco.obserra.backend.model.Service;
@@ -16,12 +22,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
-
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Service for interacting with the Spring Boot Actuator loggers endpoint.
@@ -43,8 +43,8 @@ public class LoggerService {
 
         // Configure RestTemplate with timeout
         this.restTemplate = restTemplateBuilder
-                .setConnectTimeout(Duration.ofMillis(loggersTimeoutMs))
-                .setReadTimeout(Duration.ofMillis(loggersTimeoutMs))
+                .connectTimeout(Duration.ofMillis(loggersTimeoutMs))
+                .readTimeout(Duration.ofMillis(loggersTimeoutMs))
                 .build();
     }
 

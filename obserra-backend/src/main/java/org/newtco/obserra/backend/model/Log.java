@@ -8,27 +8,27 @@ import java.time.LocalDateTime;
  */
 public class Log {
 
-    private Long id;
-    private Long serviceId;
+    private String id;
+    private String serviceId;
     private LocalDateTime timestamp = LocalDateTime.now();
     private String level = "INFO";
     private String message;
 
     // Getters and Setters
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public Long getServiceId() {
+    public String getServiceId() {
         return serviceId;
     }
 
-    public void setServiceId(Long serviceId) {
+    public void setServiceId(String serviceId) {
         this.serviceId = serviceId;
     }
 

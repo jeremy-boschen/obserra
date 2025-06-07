@@ -1,7 +1,14 @@
 package org.newtco.bootmonitoring;
 
+import java.time.Duration;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import jakarta.annotation.PreDestroy;
+
 import org.newtco.obserra.shared.model.ServiceRegistration;
+import org.newtco.obserra.shared.model.ServiceRegistration.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -17,11 +24,14 @@ import org.springframework.web.client.RestTemplate;
  * metrics.
  */
 public class MonitorService {
-    private static final Logger logger = LoggerFactory.getLogger(MonitorService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MonitorService.class);
 
-    private final String       registrationServer;
-    private final RestTemplate restTemplate;
-    private       String       registrationId;
+    private final String                      registrationServer;
+    private final RestTemplate                restTemplate;
+    private final Duration                    updateInterval;
+    private       String                      registrationId;
+    private       ServiceRegistration.Request registration;
+    private       ScheduledExecutorService    scheduler;
 
     /**
      * Constructor
@@ -32,6 +42,7 @@ public class MonitorService {
         this.restTemplate       = restTemplateBuilder.build();
         this.registrationServer = properties.getRegistrationServer() + (properties.getRegistrationServer().endsWith("/")
                                                                         ? "" : "/");
+        this.updateInterval     = properties.getUpdateInterval();
     }
 
     /**
@@ -47,17 +58,39 @@ public class MonitorService {
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             var response = restTemplate.postForObject(
-                    registrationServer + "api/registration/service",
-                    new HttpEntity<>(registration, headers),
-                    ServiceRegistration.Response.class);
+                registrationServer + "api/registration/service",
+                new HttpEntity<>(registration, headers),
+                ServiceRegistration.Response.class);
 
             if (response != null && response.getRegistrationId() != null) {
                 registrationId = response.getRegistrationId();
             } else {
-                logger.error("Failed to register with monitoring backend: no registrationId returned");
+                LOG.error("Failed to register with monitoring backend: no registrationId returned");
             }
         } catch (Exception e) {
-            logger.error("Failed to register with monitoring backend", e);
+            LOG.error("Failed to register with monitoring backend", e);
+        }
+
+        if (updateInterval != null && !updateInterval.isZero() && !updateInterval.isNegative()) {
+            scheduleUpdate(registration);
+        }
+    }
+
+    private synchronized void scheduleUpdate(Request registration) {
+        if (scheduler == null) {
+            scheduler = Executors.newSingleThreadScheduledExecutor();
+        }
+
+        this.registration = registration;
+
+        scheduler.schedule(this::scheduledRegistration, updateInterval.toMillis(), TimeUnit.MILLISECONDS);
+
+        LOG.info("Scheduled registration update for {} in {}", registrationId, updateInterval);
+    }
+
+    private synchronized void scheduledRegistration() {
+        if (registrationId != null && registration != null) {
+            registerWithBackend(registration);
         }
     }
 
@@ -86,16 +119,20 @@ public class MonitorService {
      * longer available.
      */
     @PreDestroy
-    public void unregisterFromBackend() {
+    public synchronized void unregisterFromBackend() {
         if (registrationId != null) {
             try {
                 // Deregister with Backend
                 restTemplate.delete(registrationServer + "api/registration/service/" + registrationId);
             } catch (Exception e) {
-                logger.error("Failed to deregister from backend", e);
+                LOG.error("Failed to deregister from backend", e);
             }
 
             registrationId = null;
+        }
+
+        if (scheduler != null) {
+            scheduler.shutdownNow();
         }
     }
 }

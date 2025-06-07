@@ -44,3 +44,4 @@ obserra:
   app-description: Demo application service
   app-version: "${spring.application.version}"
   check-interval: 15s
+  update-interval: 5s

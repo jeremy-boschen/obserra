@@ -7,13 +7,13 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Autoconfiguration for Spring Boot Monitor Client
  * <p>
- * This class automatically configures the monitoring client
- * when the 'obserra.enabled' property is set to true.
+ * This class automatically configures the monitoring client when the 'obserra.enabled' property is set to true.
  */
 @Configuration
 @EnableScheduling
@@ -24,13 +24,21 @@ public class MonitorAutoConfiguration {
 
     /**
      * Register the monitor service bean
-     * 
+     *
      * @param properties Monitor configuration properties
+     *
      * @return The monitor service bean
      */
     @Bean
     @ConditionalOnMissingBean(MonitorService.class)
-    public MonitorService monitorService(RestTemplateBuilder restTemplateBuilder, MonitorProperties properties) {
+    public MonitorService monitorService(TaskScheduler scheduler, RestTemplateBuilder restTemplateBuilder, MonitorProperties properties) {
         return new MonitorService(restTemplateBuilder, properties);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(ServiceIdGenerator.class)
+    public ServiceIdGenerator serviceIdGenerator() {
+        return new ServiceIdGenerator() {
+        };
     }
 }

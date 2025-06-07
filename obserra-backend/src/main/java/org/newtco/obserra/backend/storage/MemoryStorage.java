@@ -1,46 +1,55 @@
 package org.newtco.obserra.backend.storage;
 
-import org.newtco.obserra.backend.model.*;
-
 import java.time.LocalDateTime;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
+
+import org.newtco.obserra.backend.model.ConfigProperty;
+import org.newtco.obserra.backend.model.Log;
+import org.newtco.obserra.backend.model.Metric;
+import org.newtco.obserra.backend.model.Service;
+import org.newtco.obserra.backend.model.ServiceStatus;
+import org.newtco.obserra.backend.model.User;
 
 /**
- * In-memory implementation of the Storage interface.
- * This class stores all data in memory using Maps.
+ * In-memory implementation of the Storage interface. This class stores all data in memory using Maps.
  */
 public class MemoryStorage implements Storage {
-    private final Map<Long, User> users = new ConcurrentHashMap<>();
-    private final Map<Long, Service> services = new ConcurrentHashMap<>();
-    private final Map<Long, List<Metric>> metrics = new ConcurrentHashMap<>();
-    private final Map<Long, List<Log>> logs = new ConcurrentHashMap<>();
-    private final Map<Long, List<ConfigProperty>> configProperties = new ConcurrentHashMap<>();
+    private final Map<String, User>                 users            = new ConcurrentHashMap<>();
+    private final Map<String, Service>              services         = new ConcurrentHashMap<>();
+    private final Map<String, List<Metric>>         metrics          = new ConcurrentHashMap<>();
+    private final Map<String, List<Log>>            logs             = new ConcurrentHashMap<>();
+    private final Map<String, List<ConfigProperty>> configProperties = new ConcurrentHashMap<>();
 
-    private long currentUserId = 1;
-    private long currentServiceId = 1;
-    private long currentMetricId = 1;
-    private long currentLogId = 1;
-    private long currentConfigPropertyId = 1;
+    private AtomicLong currentUserId           = new AtomicLong(1);
+    private AtomicLong currentServiceId        = new AtomicLong(1);
+    private AtomicLong currentMetricId         = new AtomicLong(1);
+    private AtomicLong currentLogId            = new AtomicLong(1);
+    private AtomicLong currentConfigPropertyId = new AtomicLong(1);
 
     // User methods
     @Override
-    public Optional<User> getUser(Long id) {
+    public Optional<User> getUser(String id) {
         return Optional.ofNullable(users.get(id));
     }
 
     @Override
     public Optional<User> getUserByUsername(String username) {
         return users.values().stream()
-                .filter(user -> user.getUsername().equals(username))
-                .findFirst();
+                    .filter(user -> user.getUsername().equals(username))
+                    .findFirst();
     }
 
     @Override
     public User createUser(User user) {
-        user.setId(currentUserId++);
+        user.setId(String.valueOf(currentUserId.getAndIncrement()));
         users.put(user.getId(), user);
         return user;
     }
@@ -52,27 +61,26 @@ public class MemoryStorage implements Storage {
     }
 
     @Override
-    public Optional<Service> getService(Long id) {
+    public Optional<Service> getService(String id) {
         return Optional.ofNullable(services.get(id));
     }
 
     @Override
     public Optional<Service> getServiceByPodName(String podName) {
         return services.values().stream()
-                .filter(service -> podName.equals(service.getPodName()))
-                .findFirst();
+                       .filter(service -> podName.equals(service.getPodName()))
+                       .findFirst();
     }
 
     @Override
     public Optional<Service> getServiceByAppId(String appId) {
         return services.values().stream()
-                .filter(service -> appId.equals(service.getAppId()))
-                .findFirst();
+                       .filter(service -> appId.equals(service.getAppId()))
+                       .findFirst();
     }
 
     @Override
     public Service createService(Service service) {
-        service.setId(currentServiceId++);
         service.setLastUpdated(LocalDateTime.now());
         services.put(service.getId(), service);
 
@@ -85,20 +93,20 @@ public class MemoryStorage implements Storage {
     }
 
     @Override
-    public Service updateService(Long id, Service updatedService) {
+    public Service updateService(String id, Service updatedService) {
         Service existingService = services.get(id);
         if (existingService == null) {
             throw new IllegalArgumentException("Service not found with id: " + id);
         }
 
-        updatedService.setId(id);
-        updatedService.setLastUpdated(LocalDateTime.now());
-        services.put(id, updatedService);
-        return updatedService;
+        existingService.update(updatedService)
+                .setLastSeen(LocalDateTime.MIN);
+
+        return existingService;
     }
 
     @Override
-    public Service updateServiceStatus(Long id, ServiceStatus status) {
+    public Service updateServiceStatus(String id, ServiceStatus status) {
         Service service = services.get(id);
         if (service == null) {
             throw new IllegalArgumentException("Service not found with id: " + id);
@@ -110,7 +118,7 @@ public class MemoryStorage implements Storage {
     }
 
     @Override
-    public Service updateServiceLastSeen(Long id) {
+    public Service updateServiceLastSeen(String id) {
         Service service = services.get(id);
         if (service == null) {
             throw new IllegalArgumentException("Service not found with id: " + id);
@@ -121,7 +129,7 @@ public class MemoryStorage implements Storage {
     }
 
     @Override
-    public void deleteService(Long id) {
+    public void deleteService(String id) {
         services.remove(id);
         metrics.remove(id);
         logs.remove(id);
@@ -163,42 +171,42 @@ public class MemoryStorage implements Storage {
         LocalDateTime cutoffTime = LocalDateTime.now().minusSeconds(maxAgeSeconds);
 
         return services.values().stream()
-                .filter(service -> {
-                    // Skip services that don't need checking
-                    if (service.getStatus() == ServiceStatus.DOWN && 
-                        service.getLastSeen() != null && 
-                        service.getLastSeen().isBefore(cutoffTime)) {
-                        return false;
-                    }
+                       .filter(service -> {
+                           // Skip services that don't need checking
+                           if (service.getStatus() == ServiceStatus.DOWN &&
+                               service.getLastSeen() != null &&
+                               service.getLastSeen().isBefore(cutoffTime)) {
+                               return false;
+                           }
 
-                    // Check based on interval if specified
-                    if (service.getCheckInterval() != null && service.getLastSeen() != null) {
-                        LocalDateTime nextCheckTime = service.getLastSeen()
-                                .plus(service.getCheckInterval());
-                        return LocalDateTime.now().isAfter(nextCheckTime);
-                    }
+                           // Check based on interval if specified
+                           if (service.getCheckInterval() != null && service.getLastSeen() != null) {
+                               LocalDateTime nextCheckTime = service.getLastSeen()
+                                                                    .plus(service.getCheckInterval());
+                               return LocalDateTime.now().isAfter(nextCheckTime);
+                           }
 
-                    // Default: check services that haven't been checked recently
-                    return service.getLastSeen() == null || service.getLastSeen().isBefore(cutoffTime);
-                })
-                .collect(Collectors.toList());
+                           // Default: check services that haven't been checked recently
+                           return service.getLastSeen() == null || service.getLastSeen().isBefore(cutoffTime);
+                       })
+                       .collect(Collectors.toList());
     }
 
     // Metrics methods
     @Override
-    public List<Metric> getMetricsForService(Long serviceId, int limit) {
+    public List<Metric> getMetricsForService(String serviceId, int limit) {
         List<Metric> serviceMetrics = metrics.getOrDefault(serviceId, new ArrayList<>());
 
         // Return the most recent metrics first
         return serviceMetrics.stream()
-                .sorted(Comparator.comparing(Metric::getTimestamp).reversed())
-                .limit(limit)
-                .collect(Collectors.toList());
+                             .sorted(Comparator.comparing(Metric::getTimestamp).reversed())
+                             .limit(limit)
+                             .collect(Collectors.toList());
     }
 
     @Override
     public Metric createMetric(Metric metric) {
-        metric.setId(currentMetricId++);
+        metric.setId(String.valueOf(currentMetricId.getAndIncrement()));
         if (metric.getTimestamp() == null) {
             metric.setTimestamp(LocalDateTime.now());
         }
@@ -211,19 +219,19 @@ public class MemoryStorage implements Storage {
 
     // Logs methods
     @Override
-    public List<Log> getLogsForService(Long serviceId, int limit) {
+    public List<Log> getLogsForService(String serviceId, int limit) {
         List<Log> serviceLogs = logs.getOrDefault(serviceId, new ArrayList<>());
 
         // Return the most recent logs first
         return serviceLogs.stream()
-                .sorted(Comparator.comparing(Log::getTimestamp).reversed())
-                .limit(limit)
-                .collect(Collectors.toList());
+                          .sorted(Comparator.comparing(Log::getTimestamp).reversed())
+                          .limit(limit)
+                          .collect(Collectors.toList());
     }
 
     @Override
     public Log createLog(Log log) {
-        log.setId(currentLogId++);
+        log.setId(String.valueOf(currentLogId.getAndIncrement()));
         if (log.getTimestamp() == null) {
             log.setTimestamp(LocalDateTime.now());
         }
@@ -236,21 +244,21 @@ public class MemoryStorage implements Storage {
 
     // Configuration methods
     @Override
-    public List<ConfigProperty> getConfigPropertiesForService(Long serviceId) {
+    public List<ConfigProperty> getConfigPropertiesForService(String serviceId) {
         return configProperties.getOrDefault(serviceId, new ArrayList<>());
     }
 
     @Override
-    public Optional<ConfigProperty> getConfigProperty(Long id) {
+    public Optional<ConfigProperty> getConfigProperty(String id) {
         return configProperties.values().stream()
-                .flatMap(List::stream)
-                .filter(property -> property.getId().equals(id))
-                .findFirst();
+                               .flatMap(List::stream)
+                               .filter(property -> property.getId().equals(id))
+                               .findFirst();
     }
 
     @Override
     public ConfigProperty createConfigProperty(ConfigProperty property) {
-        property.setId(currentConfigPropertyId++);
+        property.setId(String.valueOf(currentConfigPropertyId.getAndIncrement()));
         if (property.getLastUpdated() == null) {
             property.setLastUpdated(LocalDateTime.now());
         }
@@ -263,7 +271,7 @@ public class MemoryStorage implements Storage {
     }
 
     @Override
-    public ConfigProperty updateConfigProperty(Long id, ConfigProperty updatedProperty) {
+    public ConfigProperty updateConfigProperty(String id, ConfigProperty updatedProperty) {
         // Find the property to update
         for (List<ConfigProperty> properties : configProperties.values()) {
             for (int i = 0; i < properties.size(); i++) {
@@ -281,7 +289,7 @@ public class MemoryStorage implements Storage {
     }
 
     @Override
-    public void deleteConfigProperty(Long id) {
+    public void deleteConfigProperty(String id) {
         configProperties.values().forEach(properties -> {
             properties.removeIf(property -> property.getId().equals(id));
         });

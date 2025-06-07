@@ -54,20 +54,26 @@ management:
 logging:
   level:
     root: INFO
-    org.newtco.obserra: DEBUG
-    org.springframework.web: INFO
+    org.newtco.obserra: INFO
+    org.newtco.obserra.backend.collector.CircuitBreaker: INFO
+    org.springframework.web: DEBUG
     org.hibernate: INFO
+
 
 # Application-specific configuration
 obserra:
   collectors:
+    interval: 5s
+    timeout: 30s
+
+    max-concurrent-requests: 30
+
     spring-boot:
       enabled: true
       timeout: 5s
-      check-interval: 30s
-
+      check-interval: 5s
       health:
-        check-interval: 15s
+        check-interval: 1s
         show-components: true
 
 

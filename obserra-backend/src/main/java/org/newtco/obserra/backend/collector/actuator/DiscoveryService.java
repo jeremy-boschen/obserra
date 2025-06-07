@@ -1,5 +1,8 @@
 package org.newtco.obserra.backend.collector.actuator;
 
+import java.util.List;
+import java.util.Map;
+
 import org.newtco.obserra.backend.collector.config.CollectorConfig;
 import org.newtco.obserra.backend.model.ActuatorEndpoint;
 import org.newtco.obserra.backend.model.Service;
@@ -11,9 +14,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClient;
 
-import java.util.List;
-import java.util.Map;
-
 /**
  * Service for discovering available actuator endpoints from a Spring Boot application. This service queries the
  * actuator endpoint to discover available endpoints, accepting each for which there is an available ActuatorCollector.
@@ -23,13 +23,13 @@ public class DiscoveryService {
 
     private static final Logger logger = LoggerFactory.getLogger(DiscoveryService.class);
 
-    private final RestClient              webClient;
-    private final List<ActuatorCollector> collectors;
+    private final RestClient                 webClient;
+    private final List<ActuatorCollector<?>> collectors;
 
     @Autowired
     public DiscoveryService(
-            CollectorConfig config,
-            List<ActuatorCollector> collectors) {
+        CollectorConfig config,
+        List<ActuatorCollector<?>> collectors) {
 
         this.webClient  = config.webClient();
         this.collectors = collectors;
@@ -43,22 +43,23 @@ public class DiscoveryService {
      * @return A list of discovered actuator endpoints
      */
     public List<ActuatorEndpoint> discoverServiceEndpoints(Service service) {
-        logger.info("Discovering Spring Boot actuator endpoints for service: {} ({})", service.getName(), service.getId());
+        logger.debug("Discovering Spring Boot actuator endpoints for service: {} ({})", service.getName(), service.getId());
 
         try {
             var actuatorLinks = webClient.get()
-                                         .uri(service.getActuatorUrl())
-                                         .retrieve()
-                                         .body(ActuatorLinks.class);
+                .uri(service.getActuatorUrl())
+                .retrieve()
+                .body(ActuatorLinks.class);
 
             if (null != actuatorLinks) {
                 return actuatorLinks._links().entrySet().stream()
-                                    .map(entry -> new ActuatorEndpoint()
-                                            .setType(entry.getKey())
-                                            .setHref(entry.getValue().getHref())
-                                            .setEnabled(entry.getValue().isTemplated()))
-                                    .filter(this::isSupportedActuator)
-                                    .toList();
+                    .map(entry -> new ActuatorEndpoint()
+                        .setType(entry.getKey())
+                        .setHref(entry.getValue().getHref())
+                        .setTemplated(entry.getValue().isTemplated())
+                        .setEnabled(true))
+                    .filter(this::isSupportedActuator)
+                    .toList();
             }
         } catch (HttpStatusCodeException e) {
             logger.error("Error discovering Spring Boot actuator endpoints for service {}: {}", service.getName(), e.getMessage(), e);

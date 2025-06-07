@@ -1,11 +1,16 @@
 package org.newtco.obserra.backend.k8s;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.Configuration;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Pod;
-import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.models.V1Service;
 import io.kubernetes.client.openapi.models.V1ServiceList;
 import io.kubernetes.client.util.Config;
@@ -21,12 +26,6 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 /**
  * Service discovery for Kubernetes.
@@ -96,10 +95,10 @@ public class KubernetesServiceDiscovery {
 
         try {
             // Get all pods in all namespaces
-            V1PodList podList = api.listPodForAllNamespaces(null, null, null, null, null, null, null, null, null, null);
+            var podList = api.listPodForAllNamespaces().execute();
             
             // Get all services in all namespaces
-            V1ServiceList serviceList = api.listServiceForAllNamespaces(null, null, null, null, null, null, null, null, null, null);
+            var serviceList = api.listServiceForAllNamespaces().execute();
             
             // Map services to pods
             for (V1Pod pod : podList.getItems()) {

@@ -1,5 +1,10 @@
 package org.newtco.obserra.backend.controller;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import org.newtco.obserra.backend.model.ConfigProperty;
 import org.newtco.obserra.backend.model.Logger;
 import org.newtco.obserra.backend.model.LoggerLevel;
@@ -10,12 +15,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Controller for configuration properties and loggers.
@@ -45,7 +52,7 @@ public class ConfigAndLoggersController {
      * @return the configuration properties for the specified service
      */
     @GetMapping("/services/{id}/config")
-    public ResponseEntity<?> getServiceConfigProperties(@PathVariable Long id) {
+    public ResponseEntity<?> getServiceConfigProperties(@PathVariable String id) {
         try {
             Optional<Service> service = storage.getService(id);
             if (!service.isPresent()) {
@@ -72,8 +79,8 @@ public class ConfigAndLoggersController {
      */
     @GetMapping("/services/{id}/config/{propertyId}")
     public ResponseEntity<?> getServiceConfigProperty(
-            @PathVariable Long id,
-            @PathVariable Long propertyId) {
+            @PathVariable String id,
+            @PathVariable String propertyId) {
         try {
             Optional<Service> service = storage.getService(id);
             if (!service.isPresent()) {
@@ -104,7 +111,7 @@ public class ConfigAndLoggersController {
      */
     @PostMapping("/services/{id}/config")
     public ResponseEntity<?> createServiceConfigProperty(
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestBody ConfigProperty property) {
         try {
             Optional<Service> service = storage.getService(id);
@@ -137,8 +144,8 @@ public class ConfigAndLoggersController {
      */
     @PutMapping("/services/{id}/config/{propertyId}")
     public ResponseEntity<?> updateServiceConfigProperty(
-            @PathVariable Long id,
-            @PathVariable Long propertyId,
+            @PathVariable String id,
+            @PathVariable String propertyId,
             @RequestBody ConfigProperty property) {
         try {
             Optional<Service> service = storage.getService(id);
@@ -177,8 +184,8 @@ public class ConfigAndLoggersController {
      */
     @DeleteMapping("/services/{id}/config/{propertyId}")
     public ResponseEntity<?> deleteServiceConfigProperty(
-            @PathVariable Long id,
-            @PathVariable Long propertyId) {
+            @PathVariable String id,
+            @PathVariable String propertyId) {
         try {
             Optional<Service> service = storage.getService(id);
             if (!service.isPresent()) {
@@ -209,7 +216,7 @@ public class ConfigAndLoggersController {
      * @return the loggers for the specified service
      */
     @GetMapping("/services/{id}/loggers")
-    public ResponseEntity<?> getServiceLoggers(@PathVariable Long id) {
+    public ResponseEntity<?> getServiceLoggers(@PathVariable String id) {
         try {
             Optional<Service> serviceOpt = storage.getService(id);
             if (!serviceOpt.isPresent()) {
@@ -249,7 +256,7 @@ public class ConfigAndLoggersController {
      */
     @PostMapping("/services/{id}/loggers/{loggerName}")
     public ResponseEntity<?> setServiceLoggerLevel(
-            @PathVariable Long id,
+            @PathVariable String id,
             @PathVariable String loggerName,
             @RequestBody Map<String, String> requestBody) {
         try {

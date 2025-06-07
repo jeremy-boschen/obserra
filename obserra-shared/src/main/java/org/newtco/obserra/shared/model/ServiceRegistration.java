@@ -1,9 +1,9 @@
 package org.newtco.obserra.shared.model;
 
+import java.time.Duration;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.time.Duration;
 
 public class ServiceRegistration {
     /**
@@ -18,6 +18,12 @@ public class ServiceRegistration {
 
         @JsonProperty("appId")
         private String appId;
+
+        /**
+         * Unique identifier for the service's instance. This should change each time the service is restarted.
+         */
+        @JsonProperty("serviceId")
+        private String serviceId;
 
         @JsonProperty("version")
         private String version;
@@ -76,6 +82,15 @@ public class ServiceRegistration {
             return this;
         }
 
+        public String getServiceId() {
+            return serviceId;
+        }
+
+        public Request setServiceId(String serviceId) {
+            this.serviceId = serviceId;
+            return this;
+        }
+
         public String getVersion() {
             return version;
         }
@@ -108,6 +123,7 @@ public class ServiceRegistration {
         public String toString() {
             return "Request{" + "name='" + name + '\'' +
                    ", appId='" + appId + '\'' +
+                   ", serviceId='" + serviceId + '\'' +
                    ", version='" + version + '\'' +
                    ", actuatorUrl='" + actuatorUrl + '\'' +
                    ", actuatorPort=" + actuatorPort +

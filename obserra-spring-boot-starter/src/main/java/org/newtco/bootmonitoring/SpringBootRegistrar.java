@@ -1,5 +1,7 @@
 package org.newtco.bootmonitoring;
 
+import java.util.UUID;
+
 import org.newtco.obserra.shared.model.ServiceRegistration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,8 +10,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
-
-import java.util.UUID;
 
 /**
  * Spring Boot Monitor Registration
@@ -43,7 +43,8 @@ public class SpringBootRegistrar {
             if (monitorProperties.isEnabled() && monitorProperties.isAutoRegister()) {
                 try {
                     // Register with the backend using the monitor service
-                    context.getBean(MonitorService.class).registerWithBackend(buildRegistrationRequest(context, monitorProperties));
+                    context.getBean(MonitorService.class).registerWithBackend(
+                        buildRegistrationRequest(context, monitorProperties));
                 } catch (Exception e) {
                     logger.error("Failed to register with monitoring backend {}", monitorProperties.getRegistrationServer(), e);
                 }
@@ -58,11 +59,12 @@ public class SpringBootRegistrar {
          * @return ServiceRegistrationRequest with application information
          */
         private ServiceRegistration.Request buildRegistrationRequest(
-                ApplicationContext context,
-                MonitorProperties monitorProperties) {
+            ApplicationContext context,
+            MonitorProperties monitorProperties) {
 
             // Get required beans from context
-            Environment env = context.getBean(Environment.class);
+            Environment        env         = context.getBean(Environment.class);
+            ServiceIdGenerator idGenerator = context.getBean(ServiceIdGenerator.class);
 
             var managementPath = env.getProperty("management.endpoints.web.base-path", "/actuator");
             var contextPath    = env.getProperty("server.servlet.context-path", "");
@@ -134,14 +136,14 @@ public class SpringBootRegistrar {
 
             // Build request using method chaining
             return new ServiceRegistration.Request()
-                    .setName(name)
-                    .setAppId(monitorProperties.getAppId())
-                    .setVersion(version)
-                    .setActuatorUrl(managementPath)
-                    .setActuatorPort(managementPort)
-                    .setCheckInterval(monitorProperties.getCheckInterval())
-                    .setAutoRegister(monitorProperties.isAutoRegister());
+                .setName(name)
+                .setAppId(monitorProperties.getAppId())
+                .setServiceId(idGenerator.generate())
+                .setVersion(version)
+                .setActuatorUrl(managementPath)
+                .setActuatorPort(managementPort)
+                .setCheckInterval(monitorProperties.getCheckInterval())
+                .setAutoRegister(monitorProperties.isAutoRegister());
         }
-
     }
 }

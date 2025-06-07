@@ -5,8 +5,14 @@ package org.newtco.obserra.shared.model.ui;
  */
 public interface ServiceInsight<T> {
 
+    /**
+     * The type of service insight. E.g. "health", "metrics", etc.
+     */
     String type();
 
+    /**
+     * The actual insight data.
+     */
     T insight();
 
     static <T> ServiceInsight<T> of(String type, T insight) {

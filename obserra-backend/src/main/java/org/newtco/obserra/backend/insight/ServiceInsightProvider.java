@@ -18,7 +18,7 @@ public interface ServiceInsightProvider<T> {
      * The type of data provided by this provider. This should match the type of collector that the provider is
      * associated with.
      */
-    String type();
+    String providerType();
 
     /**
      * Provide insights about service data collected by the collector associated with this provider.

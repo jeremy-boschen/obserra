@@ -2,7 +2,11 @@ package org.newtco.obserra.backend.model;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Model representing a Spring Boot application service. This corresponds to the 'services' table in the schema.
@@ -12,7 +16,7 @@ import java.util.*;
  */
 public class Service {
     // Runtime data required for service interaction
-    private Long                   id;
+    private String                 id;
     private String                 name;
     private String                 namespace          = "default";
     private String                 version            = "unknown";
@@ -33,11 +37,11 @@ public class Service {
     private ServiceData serviceData = new ServiceData();
 
     // Getters and Setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public Service setId(Long id) {
+    public Service setId(String id) {
         this.id = id;
         return this;
     }
@@ -203,6 +207,11 @@ public class Service {
         return (T) collectorData.get(type);
     }
 
+    public Service collectorData(String type, Object data) {
+        this.collectorData.put(type, data);
+        return this;
+    }
+
 
     /**
      * Get the service data collected by collectors
@@ -225,7 +234,16 @@ public class Service {
         return this;
     }
 
-    public int retries(String type) {
-        return retries.getOrDefault(type, 0);
+    public Service update(Service service) {
+        this.id = service.id;
+        this.name = service.name;
+        this.namespace = service.namespace;
+        this.version = service.version;
+        this.podName = service.podName;
+        this.status = service.status;
+        this.lastUpdated = service.lastUpdated;
+        this.lastSeen = service.lastSeen;
+        this.clusterDns = service.clusterDns;
+        return this;
     }
 }
