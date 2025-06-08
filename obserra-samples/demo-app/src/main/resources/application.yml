@@ -8,6 +8,10 @@ spring:
 server:
   port: 8080
 
+logging:
+  level:
+    org.springframework.boot.actuate.endpoint: TRACE
+
 # Spring Boot Actuator Configuration
 management:
   server:

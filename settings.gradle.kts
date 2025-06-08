@@ -7,7 +7,7 @@ println("JAVA_HOME:      ${System.getenv("JAVA_HOME")}")
 println("GRADLE_HOME:    ${System.getenv("GRADLE_HOME")}")
 
 
+include(":obserra-shared")
 include(":obserra-backend")
 include(":obserra-spring-boot-starter")
 include(":obserra-samples:demo-app")
-include(":obserra-shared")

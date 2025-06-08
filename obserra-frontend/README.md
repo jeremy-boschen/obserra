@@ -1,78 +1,123 @@
-# Obserra Dashboard
+# Obserra Frontend - Minimal Setup
 
-This is the dashboard UI for the Obserra monitoring system.
+This document describes the minimal setup for the Obserra Frontend, assuming that the Obserra Backend will provide all services required to provide data to the UI.
 
-## Running with Java Backend
+## Overview
 
-The dashboard UI can now be run with the Java backend instead of the Node.js backend. Follow these steps:
+The minimal frontend setup includes only the client-side UI components and the necessary configuration files to build and run the UI. All server-side components have been removed, as they will be provided by the Obserra Backend.
 
-### 1. Start the Java Backend
+## Directory Structure
 
-First, make sure the Java backend is running:
-
-```bash
-# Navigate to the obserra-backend directory
-cd ../obserra-backend
-
-# Run the Spring Boot application
-./gradlew bootRun
-```
-
-This will start the Java backend on port 5000.
-
-### 2. Start the Dashboard UI
-
-In a separate terminal, start the dashboard UI:
-
-```bash
-# Navigate to the obserra-dashboard directory
-cd ../obserra-dashboard
-
-# Install dependencies (if not already done)
-npm install
-
-# Run the dashboard UI with Java backend
-npm run dev:java
-```
-
-This will start the dashboard UI on port 3000 and proxy all API requests to the Java backend on port 5000.
-
-### 3. Access the Dashboard
-
-Open your browser and navigate to:
+The minimal frontend setup has the following directory structure:
 
 ```
-http://localhost:3000
+obserra-frontend/
+├── client/                  # Client-side UI code
+│   ├── index.html           # HTML entry point
+│   └── src/                 # Source code
+│       ├── components/      # UI components
+│       ├── hooks/           # React hooks
+│       ├── lib/             # Utility functions
+│       ├── pages/           # Page components
+│       ├── types/           # TypeScript types
+│       ├── App.tsx          # Main application component
+│       ├── index.css        # Main CSS file
+│       └── main.tsx         # JavaScript entry point
+├── components.json          # UI component configuration
+├── package.json             # Dependencies and scripts
+├── package-lock.json        # Locked dependencies
+├── postcss.config.js        # PostCSS configuration
+├── tailwind.config.ts       # Tailwind CSS configuration
+├── tsconfig.json            # TypeScript configuration
+├── tsconfig.node.json       # Node.js TypeScript configuration
+└── vite.config.ts           # Vite build configuration
 ```
 
-## Development
+## Removed Components
 
-### Running with Node.js Backend (Original Mode)
+The following components have been removed as they are not necessary for the minimal frontend setup:
 
-If you want to run the dashboard with the original Node.js backend:
+1. **Server Directory**: The entire `server/` directory has been removed, including:
+    - API routes
+    - WebSocket handling
+    - Kubernetes integration
+    - Health checks
+    - Metrics collection
+    - Service discovery
 
-```bash
-npm run dev
+2. **Shared Directory**: The `shared/` directory has been removed as it primarily contained schemas used by the server.
+
+3. **Database Configuration**: The `drizzle.config.ts` file has been removed as it was used for server-side database configuration.
+
+4. **Docker Configuration**: The `Dockerfile` and `docker-compose.yml` files have been removed as they were used for containerizing the full-stack application.
+
+## Modified Configuration Files
+
+The following configuration files have been modified to support the minimal frontend setup:
+
+1. **package.json**: Updated to:
+    - Remove server-side dependencies
+    - Update scripts to only include client-side build and development commands
+
+2. **vite.config.ts**: Updated to:
+    - Remove server-specific configuration
+    - Update aliases to remove @shared and other server-related paths
+    - Simplify the build output directory
+
+## Building and Running
+
+To build and run the minimal frontend:
+
+1. Install dependencies:
+   ```
+   npm install
+   ```
+
+2. Run in development mode:
+   ```
+   npm run dev
+   ```
+
+3. Build for production:
+   ```
+   npm run build
+   ```
+
+4. Preview the production build:
+   ```
+   npm run preview
+   ```
+
+## Integration with Obserra Backend
+
+The built frontend files (in the `dist/` directory) can be served by:
+
+1. The Obserra Backend directly (recommended)
+2. A simple static file server
+3. A CDN or other hosting service
+
+The frontend expects the Obserra Backend to provide all necessary API endpoints for data retrieval and manipulation.
+
+## Backend API Configuration
+
+By default, the frontend will connect to a backend server at `http://localhost:5000` for all API calls (both REST and GraphQL). This can be configured using the following environment variable:
+
+- `VITE_BACKEND_API_URL`: The base URL of the backend API server
+
+### Development Configuration
+
+When running in development mode, you can create a `.env.local` file in the project root with the following content:
+
+```
+VITE_BACKEND_API_URL=http://localhost:5000
 ```
 
-This will start both the UI and the Node.js backend on port 5000.
+### Production Configuration
 
-### Building for Production
+For production deployments, you can set the environment variable during the build process:
 
-To build the dashboard for production:
-
-```bash
-npm run build
+```
+VITE_BACKEND_API_URL=https://api.example.com npm run build
 ```
 
-This will create a production build in the `dist` directory.
-
-### Running in Production Mode
-
-To run the dashboard in production mode:
-
-```bash
-npm run start
-```
-
-This will serve the production build from the `dist` directory.
+Or you can configure it in your hosting environment.

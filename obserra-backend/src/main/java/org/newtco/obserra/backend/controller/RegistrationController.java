@@ -91,15 +91,17 @@ public class RegistrationController {
                 logger.error("Error discovering actuator endpoints for service {}", service.getName(), e);
             }
 
-            // Unregister the existing service if it exists
-            var existing = storage.getServiceByAppId(registration.getAppId());
-            if (existing.isEmpty()) {
-                service = storage.createService(service);
-                logger.info("Created service registration: {} ({}/{})", service.getName(), service.getId(), service.getAppId());
-            } else {
-                service = storage.updateService(existing.get().getId(), service);
-                logger.debug("Updated service registration: {} ({}/{})", service.getName(), service.getId(), service.getAppId());
-            }
+            service = storage.updateServiceByAppId(registration.getAppId(), service);
+
+//            // Unregister the existing service if it exists
+//            var existing = storage.getServiceByAppId(registration.getAppId());
+//            if (existing.isEmpty()) {
+//                service = storage.createService(service);
+//                logger.info("Created service registration: {} ({}/{})", service.getName(), service.getId(), service.getAppId());
+//            } else {
+//                service = storage.updateService(existing.get().getId(), service);
+//                logger.debug("Updated service registration: {} ({}/{})", service.getName(), service.getId(), service.getAppId());
+//            }
 
             // Return the registered service
             return ResponseEntity.status(HttpStatus.CREATED)

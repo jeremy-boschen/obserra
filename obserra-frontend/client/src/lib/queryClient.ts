@@ -1,5 +1,8 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// Backend API URL - use environment variable if available, otherwise default to localhost:5000 for development
+const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:5000';
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -13,7 +16,9 @@ export async function apiRequest<T = any>(options: {
   body?: unknown | undefined;
 }): Promise<T> {
   const { url, method, body } = options;
-  const res = await fetch(url, {
+  // Ensure URL is absolute by prepending BACKEND_API_URL if it's a relative URL
+  const absoluteUrl = url.startsWith('/') ? `${BACKEND_API_URL}${url}` : url;
+  const res = await fetch(absoluteUrl, {
     method,
     headers: body ? { "Content-Type": "application/json" } : {},
     body: body ? JSON.stringify(body) : undefined,
@@ -30,7 +35,10 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    // Ensure URL is absolute by prepending BACKEND_API_URL if it's a relative URL
+    const url = queryKey[0] as string;
+    const absoluteUrl = url.startsWith('/') ? `${BACKEND_API_URL}${url}` : url;
+    const res = await fetch(absoluteUrl, {
       credentials: "include",
     });
 

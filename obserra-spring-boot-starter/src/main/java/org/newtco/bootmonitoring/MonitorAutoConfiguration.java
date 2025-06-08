@@ -1,5 +1,6 @@
 package org.newtco.bootmonitoring;
 
+import org.springframework.boot.actuate.metrics.MetricsEndpoint;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -40,5 +41,11 @@ public class MonitorAutoConfiguration {
     public ServiceIdGenerator serviceIdGenerator() {
         return new ServiceIdGenerator() {
         };
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(ObserraEndpoint.class)
+    public ObserraEndpoint insightsEndpoint(MetricsEndpoint metricsEndpoint) {
+        return new ObserraEndpoint(metricsEndpoint);
     }
 }
