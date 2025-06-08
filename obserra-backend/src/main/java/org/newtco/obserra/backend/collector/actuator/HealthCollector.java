@@ -42,7 +42,11 @@ public class HealthCollector implements ActuatorCollector<HealthProperties> {
     public void collect(Service service, ActuatorEndpoint actuatorEndpoint) {
         logger.debug("Checking health for service: {} ({})", service.getName(), service.getId());
 
-        var data = webClient.get().uri(actuatorEndpoint.getHref()).retrieve().onStatus(CollectorUtils.collectorHttpErrorHandler(service, this)).body(HealthData.class);
+        var data = webClient.get()
+            .uri(actuatorEndpoint.getHref())
+            .retrieve()
+            .onStatus(CollectorUtils.collectorHttpErrorHandler(service, this))
+            .body(HealthData.class);
         if (data == null) {
             data = new HealthData("UNKNOWN", Map.of());
         }

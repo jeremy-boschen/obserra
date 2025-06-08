@@ -56,8 +56,10 @@ logging:
     root: INFO
     org.newtco.obserra: INFO
     org.newtco.obserra.backend.collector.CircuitBreaker: INFO
-    org.springframework.web: DEBUG
+    org.springframework.web: INFO
     org.hibernate: INFO
+    com.netflix.graphql.dgs: DEBUG
+    org.newtco.obserra.backend.graphql: DEBUG
 
 
 # Application-specific configuration
@@ -86,4 +88,3 @@ obserra:
     timeout: 5s
     kubernetes:
       enabled: false
-

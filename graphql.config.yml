@@ -1,0 +1,4 @@
+projects:
+  backend:
+    schema: obserra-backend/src/main/resources/schema/schema.graphql
+    documents: backend/**/*.graphql

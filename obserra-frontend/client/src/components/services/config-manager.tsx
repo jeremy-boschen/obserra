@@ -1,637 +1,532 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertConfigPropertySchema, PropertyTypeEnum } from "@shared/schema";
 import { useServiceConfig } from "@/hooks/use-service-config";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, Edit, Plus, Trash } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, Edit, Plus, Trash2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Extend the config property schema for the form with additional validation
-const configPropertyFormSchema = insertConfigPropertySchema
-  .omit({ serviceId: true })
-  .extend({
-    // Make sure the key is at least 2 characters and follows a valid pattern
-    key: z.string().min(2, {
-      message: "Key must be at least 2 characters",
-    }),
-    // Add additional validation for value field based on the type
-    value: z.string().min(1, {
-      message: "Value is required",
-    }),
-  });
+// Define the property types for Spring Boot configuration
+const PropertyTypeEnum = z.enum([
+    "STRING",
+    "NUMBER",
+    "BOOLEAN",
+    "ARRAY",
+    "MAP",
+    "JSON",
+    "YAML"
+]);
+type PropertyType = z.infer<typeof PropertyTypeEnum>;
+
+// Type definition for a configuration property
+type ConfigProperty = {
+    id: number;
+    serviceId: number;
+    key: string;
+    value: string;
+    type: PropertyType;
+    description: string | null;
+    source: string;
+    isActive: boolean;
+    lastUpdated: Date | null;
+};
+
+// Define a Zod schema for form validation
+const configPropertyFormSchema = z.object({
+    key: z.string().min(1, "Property key is required"),
+    value: z.string().min(1, "Property value is required"),
+    type: PropertyTypeEnum,
+    source: z.string().min(1, "Source file is required"),
+    description: z.string().optional(),
+    isActive: z.boolean().default(true),
+});
 
 type ConfigPropertyFormValues = z.infer<typeof configPropertyFormSchema>;
 
 interface ConfigManagerProps {
-  serviceId: number | string;
+    serviceId: number | string;
 }
 
 export function ConfigManager({ serviceId }: ConfigManagerProps) {
-  const {
-    configProperties,
-    isLoading,
-    error,
-    createProperty,
-    updateProperty,
-    deleteProperty,
-    isCreating,
-    isUpdating,
-    isDeleting,
-  } = useServiceConfig(serviceId);
+    const [editPropertyId, setEditPropertyId] = useState<number | null>(null);
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingProperty, setEditingProperty] = useState<null | number>(null);
-  const [activeTab, setActiveTab] = useState<string>("all");
+    const {
+        configProperties,
+        isLoading,
+        error,
+        createProperty,
+        updateProperty,
+        deleteProperty,
+        isCreating,
+        isUpdating,
+        isDeleting
+    } = useServiceConfig(serviceId);
 
-  // Create form
-  const createForm = useForm<ConfigPropertyFormValues>({
-    resolver: zodResolver(configPropertyFormSchema),
-    defaultValues: {
-      key: "",
-      value: "",
-      type: "STRING",
-      description: "",
-      source: "application.properties",
-      isActive: true,
-    },
-  });
-
-  // Edit form
-  const editForm = useForm<ConfigPropertyFormValues>({
-    resolver: zodResolver(configPropertyFormSchema),
-    defaultValues: {
-      key: "",
-      value: "",
-      type: "STRING",
-      description: "",
-      source: "application.properties",
-      isActive: true,
-    },
-  });
-
-  // Handle create form submission
-  function onCreateSubmit(data: ConfigPropertyFormValues) {
-    createProperty(data, {
-      onSuccess: () => {
-        createForm.reset();
-        setIsCreateDialogOpen(false);
-      },
-    });
-  }
-
-  // Handle edit form submission
-  function onEditSubmit(data: ConfigPropertyFormValues) {
-    if (editingProperty !== null) {
-      updateProperty(
-        {
-          id: editingProperty,
-          data,
-        },
-        {
-          onSuccess: () => {
-            editForm.reset();
-            setIsEditDialogOpen(false);
-            setEditingProperty(null);
-          },
+    // Group properties by source file
+    const propertiesBySource = configProperties.reduce((acc, property) => {
+        const source = property.source;
+        if (!acc[source]) {
+            acc[source] = [];
         }
-      );
+        acc[source].push(property);
+        return acc;
+    }, {} as Record<string, typeof configProperties>);
+
+    // Form for creating new properties
+    const createForm = useForm<ConfigPropertyFormValues>({
+        resolver: zodResolver(configPropertyFormSchema),
+        defaultValues: {
+            key: "",
+            value: "",
+            type: "STRING",
+            source: "application.properties",
+            description: "",
+            isActive: true
+        }
+    });
+
+    // Form for editing properties
+    const editForm = useForm<ConfigPropertyFormValues>({
+        resolver: zodResolver(configPropertyFormSchema),
+        defaultValues: {
+            key: "",
+            value: "",
+            type: "STRING",
+            source: "application.properties",
+            description: "",
+            isActive: true
+        }
+    });
+
+    function onCreateSubmit(data: ConfigPropertyFormValues) {
+        createProperty({
+            ...data,
+            description: data.description || "",
+        });
+        setCreateDialogOpen(false);
+        createForm.reset();
     }
-  }
 
-  // Set up the edit form when a property is selected for editing
-  function handleEdit(propertyId: number) {
-    const property = configProperties.find((p) => p.id === propertyId);
-    if (property) {
-      editForm.reset({
-        key: property.key,
-        value: property.value,
-        type: property.type,
-        description: property.description || "",
-        source: property.source,
-        isActive: property.isActive,
-      });
-      setEditingProperty(propertyId);
-      setIsEditDialogOpen(true);
+    function onEditSubmit(data: ConfigPropertyFormValues) {
+        if (editPropertyId) {
+            updateProperty({
+                id: editPropertyId,
+                data: {
+                    ...data,
+                    description: data.description || "",
+                }
+            });
+            setEditDialogOpen(false);
+            setEditPropertyId(null);
+            editForm.reset();
+        }
     }
-  }
 
-  // Handle property deletion
-  function handleDelete(propertyId: number) {
-    if (window.confirm("Are you sure you want to delete this property?")) {
-      deleteProperty(propertyId);
+    function handleEdit(propertyId: number) {
+        const property = configProperties.find(p => p.id === propertyId);
+        if (property) {
+            editForm.reset({
+                key: property.key,
+                value: property.value,
+                type: property.type,
+                source: property.source,
+                description: property.description || "",
+                isActive: property.isActive
+            });
+            setEditPropertyId(propertyId);
+            setEditDialogOpen(true);
+        }
     }
-  }
 
-  // Filter properties based on active tab
-  const filteredProperties = configProperties.filter((prop) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "active") return prop.isActive;
-    if (activeTab === "inactive") return !prop.isActive;
-    return true;
-  });
-
-  // Group properties by source
-  const groupedProperties = filteredProperties.reduce((acc, prop) => {
-    const source = prop.source;
-    if (!acc[source]) {
-      acc[source] = [];
+    function handleDelete(propertyId: number) {
+        if (window.confirm("Are you sure you want to delete this property?")) {
+            deleteProperty(propertyId);
+        }
     }
-    acc[source].push(prop);
-    return acc;
-  }, {} as Record<string, typeof configProperties>);
 
-  if (isLoading) {
+    if (isLoading) {
+        return <div className="py-4 text-center">Loading configuration properties...</div>;
+    }
+
+    if (error) {
+        return (
+            <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>
+                    Failed to load configuration properties. Please try again.
+                </AlertDescription>
+            </Alert>
+        );
+    }
+
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Configuration Properties</CardTitle>
-          <CardDescription>Loading configuration properties...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Skeleton loader */}
-          <div className="space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-muted h-12 rounded-md animate-pulse"
-              ></div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Configuration Properties</h3>
+                <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button size="sm" className="flex items-center gap-1">
+                            <Plus className="h-4 w-4" />
+                            <span>Add Property</span>
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Add Configuration Property</DialogTitle>
+                            <DialogDescription>
+                                Create a new configuration property for this service.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <Form {...createForm}>
+                            <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <FormField
+                                        control={createForm.control}
+                                        name="key"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Key</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Property key" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={createForm.control}
+                                        name="type"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Type</FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select a type" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="STRING">String</SelectItem>
+                                                        <SelectItem value="NUMBER">Number</SelectItem>
+                                                        <SelectItem value="BOOLEAN">Boolean</SelectItem>
+                                                        <SelectItem value="ARRAY">Array</SelectItem>
+                                                        <SelectItem value="MAP">Map</SelectItem>
+                                                        <SelectItem value="JSON">JSON</SelectItem>
+                                                        <SelectItem value="YAML">YAML</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                                <FormField
+                                    control={createForm.control}
+                                    name="description"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Description</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="Optional description"
+                                                    {...field}
+                                                    value={field.value || ''}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={createForm.control}
+                                    name="source"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Source</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Source file" {...field} />
+                                            </FormControl>
+                                            <FormDescription>
+                                                The configuration file where this property is defined
+                                            </FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={createForm.control}
+                                    name="value"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Value</FormLabel>
+                                            <FormControl>
+                                                <Textarea placeholder="Property value" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <DialogFooter>
+                                    <Button type="submit" disabled={isCreating}>
+                                        {isCreating ? "Creating..." : "Create Property"}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </Form>
+                    </DialogContent>
+                </Dialog>
+            </div>
 
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Configuration Properties</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              Failed to load configuration properties. Please try again.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    );
-  }
+            {/* Edit Property Dialog */}
+            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Configuration Property</DialogTitle>
+                        <DialogDescription>
+                            Update this configuration property.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <Form {...editForm}>
+                        <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                                <FormField
+                                    control={editForm.control}
+                                    name="key"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Key</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Property key" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={editForm.control}
+                                    name="type"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Type</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select a type" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="STRING">String</SelectItem>
+                                                    <SelectItem value="NUMBER">Number</SelectItem>
+                                                    <SelectItem value="BOOLEAN">Boolean</SelectItem>
+                                                    <SelectItem value="ARRAY">Array</SelectItem>
+                                                    <SelectItem value="MAP">Map</SelectItem>
+                                                    <SelectItem value="JSON">JSON</SelectItem>
+                                                    <SelectItem value="YAML">YAML</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <FormField
+                                control={editForm.control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Description</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Optional description"
+                                                {...field}
+                                                value={field.value || ''}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={editForm.control}
+                                name="source"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Source</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Source file" {...field} />
+                                        </FormControl>
+                                        <FormDescription>
+                                            The configuration file where this property is defined
+                                        </FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={editForm.control}
+                                name="value"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Value</FormLabel>
+                                        <FormControl>
+                                            <Textarea placeholder="Property value" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={editForm.control}
+                                name="isActive"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                            <input
+                                                type="checkbox"
+                                                checked={field.value}
+                                                onChange={field.onChange}
+                                                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                        </FormControl>
+                                        <FormLabel className="text-sm font-medium">Active</FormLabel>
+                                    </FormItem>
+                                )}
+                            />
+                            <DialogFooter>
+                                <Button type="submit" disabled={isUpdating}>
+                                    {isUpdating ? "Updating..." : "Update Property"}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </Form>
+                </DialogContent>
+            </Dialog>
 
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Configuration Properties</CardTitle>
-          <CardDescription>
-            Manage application configuration properties
-          </CardDescription>
-        </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Property
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Configuration Property</DialogTitle>
-              <DialogDescription>
-                Create a new configuration property for this service.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...createForm}>
-              <form
-                onSubmit={createForm.handleSubmit(onCreateSubmit)}
-                className="space-y-4"
-              >
-                <FormField
-                  control={createForm.control}
-                  name="key"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Key</FormLabel>
-                      <FormControl>
-                        <Input placeholder="server.port" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Configuration property key (e.g. spring.datasource.url)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={createForm.control}
-                  name="value"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Value</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Property value"
-                          className="min-h-24"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        The value for this configuration property
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={createForm.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {PropertyTypeEnum.options.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="source"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Source</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="application.properties"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={createForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Optional description"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={createForm.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel>Active</FormLabel>
-                        <FormDescription>
-                          Whether this property is active and applied to the
-                          service
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsCreateDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isCreating}>
-                    {isCreating ? "Creating..." : "Create Property"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Configuration Property</DialogTitle>
-              <DialogDescription>
-                Update the configuration property for this service.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...editForm}>
-              <form
-                onSubmit={editForm.handleSubmit(onEditSubmit)}
-                className="space-y-4"
-              >
-                <FormField
-                  control={editForm.control}
-                  name="key"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Key</FormLabel>
-                      <FormControl>
-                        <Input placeholder="server.port" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Configuration property key (e.g. spring.datasource.url)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="value"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Value</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Property value"
-                          className="min-h-24"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        The value for this configuration property
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={editForm.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {PropertyTypeEnum.options.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={editForm.control}
-                    name="source"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Source</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="application.properties"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={editForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Optional description"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel>Active</FormLabel>
-                        <FormDescription>
-                          Whether this property is active and applied to the
-                          service
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsEditDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isUpdating}>
-                    {isUpdating ? "Updating..." : "Update Property"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </CardHeader>
-      <CardContent>
-        <Tabs
-          defaultValue="all"
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="w-full"
-        >
-          <TabsList className="mb-4">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="active">Active</TabsTrigger>
-            <TabsTrigger value="inactive">Inactive</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={activeTab} className="mt-0">
-            {filteredProperties.length === 0 ? (
-              <div className="py-6 text-center">
-                <p className="text-muted-foreground">
-                  No configuration properties found. Click "Add Property" to create one.
-                </p>
-              </div>
+            {/* Display configuration properties */}
+            {configProperties.length === 0 ? (
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="text-center py-4 text-muted-foreground">
+                            No configuration properties found for this service.
+                        </div>
+                    </CardContent>
+                </Card>
             ) : (
-              <ScrollArea className="h-[calc(100vh-320px)] pr-4">
-                {Object.entries(groupedProperties).map(([source, props]) => (
-                  <div key={source} className="mb-6">
-                    <h3 className="mb-2 font-semibold text-sm">{source}</h3>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Key</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Value</TableHead>
-                          <TableHead className="w-[100px]">Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {props.map((property) => (
-                          <TableRow key={property.id}>
-                            <TableCell className="font-medium">
-                              {property.key}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {property.type}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="max-w-[200px] truncate">
-                              {property.value}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  property.isActive ? "default" : "secondary"
-                                }
-                              >
-                                {property.isActive ? "Active" : "Inactive"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEdit(property.id)}
-                                  disabled={isUpdating || isDeleting}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDelete(property.id)}
-                                  disabled={isDeleting}
-                                >
-                                  <Trash className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ))}
-              </ScrollArea>
+                <div className="space-y-6">
+                    {Object.entries(propertiesBySource).map(([source, properties]) => (
+                        <Card key={source}>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-md">{source}</CardTitle>
+                                <CardDescription>
+                                    {properties.length} {properties.length === 1 ? 'property' : 'properties'}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ScrollArea className="h-[300px]">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-[300px]">Key</TableHead>
+                                                <TableHead>Value</TableHead>
+                                                <TableHead className="w-[100px]">Type</TableHead>
+                                                <TableHead className="w-[100px]">Status</TableHead>
+                                                <TableHead className="w-[100px] text-right">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {properties.map((property) => (
+                                                <TableRow key={property.id}>
+                                                    <TableCell className="font-medium">
+                                                        {property.key}
+                                                        {property.description && (
+                                                            <p className="text-xs text-muted-foreground mt-1">{property.description}</p>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="font-mono text-sm">
+                                                        {property.value.length > 100
+                                                            ? property.value.substring(0, 100) + "..."
+                                                            : property.value}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant="outline">{property.type}</Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={property.isActive ? "default" : "secondary"}>
+                                                            {property.isActive ? "Active" : "Inactive"}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex justify-end space-x-2">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleEdit(property.id)}
+                                                            >
+                                                                <Edit className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleDelete(property.id)}
+                                                                disabled={isDeleting}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </ScrollArea>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
             )}
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
-  );
+        </div>
+    );
 }

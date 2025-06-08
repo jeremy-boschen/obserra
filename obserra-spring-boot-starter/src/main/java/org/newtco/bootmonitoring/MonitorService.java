@@ -85,7 +85,7 @@ public class MonitorService {
 
         scheduler.schedule(this::scheduledRegistration, updateInterval.toMillis(), TimeUnit.MILLISECONDS);
 
-        LOG.info("Scheduled registration update for {} in {}", registrationId, updateInterval);
+        LOG.debug("Scheduled registration update for {} in {}", registrationId, updateInterval);
     }
 
     private synchronized void scheduledRegistration() {

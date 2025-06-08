@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MetricsChart } from "@/components/services/metrics-chart";
 import { LogTable } from "@/components/services/log-table";
 import { LogLevelManager } from "@/components/services/log-level-manager";
-import { ConfigManager } from "@/components/services/config-manager-new";
+import { ConfigManager } from "@/components/services/config-manager.tsx";
 import { FullscreenLogs } from "@/components/services/fullscreen-logs";
 import { useWebSocketLogs } from "@/hooks/use-websocket-logs";
 import { useToast } from "@/hooks/use-toast";
@@ -54,7 +54,7 @@ export function ServiceDetail({
   const [realtimeLogs, setRealtimeLogs] = useState(false);
   const statusColor = getStatusColor(service.status);
   const { toast } = useToast();
-  
+
   // Function to copy section link to clipboard
   const copySectionLink = (section: string) => {
     const url = `${window.location.origin}/service/${service.id}/${section}`;
@@ -72,23 +72,23 @@ export function ServiceDetail({
       });
     });
   };
-  
+
   // State for collapsible sections with deep linking support
   const [infoOpen, setInfoOpen] = useState(initialSections.info);
   const [metricsOpen, setMetricsOpen] = useState(initialSections.metrics);
   const [logLevelOpen, setLogLevelOpen] = useState(initialSections.loglevels);
   const [configOpen, setConfigOpen] = useState(initialSections.config);
   const [logsOpen, setLogsOpen] = useState(initialSections.logs);
-  
+
   // Get the current section from URL if any
   useEffect(() => {
     // Parse the pathname to extract section if present
     const pathParts = window.location.pathname.split('/');
     const section = pathParts.length >= 4 ? pathParts[3] : null;
-    
+
     // Update location for sharing links
     setLocation(window.location.href);
-    
+
     // Set appropriate section open based on URL
     if (section) {
       // Close all sections first
@@ -97,7 +97,7 @@ export function ServiceDetail({
       setLogLevelOpen(false);
       setConfigOpen(false);
       setLogsOpen(false);
-      
+
       // Open only the requested section
       switch(section) {
         case 'info':
@@ -125,7 +125,7 @@ export function ServiceDetail({
       }
     }
   }, []);
-  
+
   // Set up WebSocket for real-time logs
   const {
     logs: wsLogs,
@@ -137,26 +137,29 @@ export function ServiceDetail({
     serviceId: service.id,
     enabled: realtimeLogs
   });
-  
-  const memoryPercentage = service.memory 
-    ? (service.memory.used / service.memory.max) * 100
-    : 0;
-  
-  const cpuPercentage = service.cpu 
-    ? service.cpu.used * 100 
-    : 0;
+
+  // Get metrics insight if available
+  const metricsInsight = service.insights?.metrics;
+
+  // Calculate memory percentage - use insights if available, fall back to legacy format
+  const memoryPercentage = metricsInsight?.memory?.usagePercentage ?? 
+    (service.memory ? (service.memory.used / service.memory.max) * 100 : 0);
+
+  // Calculate CPU percentage - use insights if available, fall back to legacy format
+  const cpuPercentage = metricsInsight?.cpu?.processUsage ?? 
+    (service.cpu ? service.cpu.used * 100 : 0);
 
   // Filter logs based on selected level and search term
   const filteredLogs = useMemo(() => {
     if (!service.logs) return [];
-    
+
     let filtered = service.logs;
-    
+
     // Filter by log level
     if (logLevel !== "ALL") {
       filtered = filtered.filter(log => log.level === logLevel);
     }
-    
+
     // Filter by search term
     if (logSearch.trim()) {
       const searchLower = logSearch.toLowerCase().trim();
@@ -165,7 +168,7 @@ export function ServiceDetail({
         log.level.toLowerCase().includes(searchLower)
       );
     }
-    
+
     return filtered;
   }, [service.logs, logLevel, logSearch]);
 
@@ -210,7 +213,7 @@ export function ServiceDetail({
                 >
                   <Link className="h-4 w-4" />
                 </Button>
-                
+
                 <Button 
                   variant="link" 
                   className="p-0 h-auto font-medium text-lg text-gray-900 dark:text-white hover:no-underline hover:opacity-80"
@@ -223,7 +226,7 @@ export function ServiceDetail({
                 >
                   <CardTitle className="text-lg leading-6 font-medium">Service Information</CardTitle>
                 </Button>
-                
+
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="sm" className="ml-2 h-8 w-8 p-0">
                     {infoOpen ? (
@@ -249,17 +252,17 @@ export function ServiceDetail({
                       title: "Restarting service...",
                       description: "This may take a few moments.",
                     });
-                    
+
                     // Call the restart function
                     const result = await refreshService();
-                    
+
                     // Show success message
                     toast({
                       title: "Service restarted successfully",
                       description: result?.message || "The service is being restarted. Metrics and logs will refresh shortly.",
                       variant: "default",
                     });
-                    
+
                   } catch (error) {
                     // Show error message
                     toast({
@@ -282,7 +285,7 @@ export function ServiceDetail({
               </Button>
             </div>
           </CardHeader>
-          
+
           <CollapsibleContent>
             <CardContent className="px-0 py-0">
               <dl>
@@ -322,7 +325,7 @@ export function ServiceDetail({
               >
                 <Link className="h-4 w-4" />
               </Button>
-              
+
               <Button 
                 variant="link" 
                 className="p-0 h-auto font-medium text-lg text-gray-900 dark:text-white hover:no-underline hover:opacity-80"
@@ -357,10 +360,10 @@ export function ServiceDetail({
               <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Memory Usage</div>
               <div className="mt-1 flex items-baseline">
                 <div className="text-2xl font-semibold text-gray-900 dark:text-white">
-                  {service.memory ? `${service.memory.used} MB` : "--"}
+                  {metricsInsight?.memory ? metricsInsight.memory.used : service.memory ? `${service.memory.used} MB` : "--"}
                 </div>
                 <div className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                  {service.memory ? `of ${service.memory.max} MB` : ""}
+                  {metricsInsight?.memory ? `of ${metricsInsight.memory.max}` : service.memory ? `of ${service.memory.max} MB` : ""}
                 </div>
               </div>
               <div className="mt-3">
@@ -371,7 +374,9 @@ export function ServiceDetail({
                   ></div>
                 </div>
                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {service.memory ? `${memoryPercentage.toFixed(1)}% utilized` : "No data available"}
+                  {metricsInsight?.memory?.usagePercentage ? 
+                    `${metricsInsight.memory.usagePercentage}% utilized` : 
+                    service.memory ? `${memoryPercentage.toFixed(1)}% utilized` : "No data available"}
                 </div>
               </div>
               <div className="mt-4">
@@ -397,9 +402,11 @@ export function ServiceDetail({
               <div className="text-sm font-medium text-gray-500 dark:text-gray-400">CPU Usage</div>
               <div className="mt-1 flex items-baseline">
                 <div className="text-2xl font-semibold text-gray-900 dark:text-white">
-                  {service.cpu ? `${cpuPercentage.toFixed(0)}%` : "--"}
+                  {metricsInsight?.cpu ? `${metricsInsight.cpu.processUsage}%` : service.cpu ? `${cpuPercentage.toFixed(0)}%` : "--"}
                 </div>
-                <div className="ml-2 text-sm text-gray-500 dark:text-gray-400">of available</div>
+                <div className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                  {metricsInsight?.cpu?.availableProcessors ? `of ${metricsInsight.cpu.availableProcessors} cores` : "of available"}
+                </div>
               </div>
               <div className="mt-3">
                 <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -409,7 +416,9 @@ export function ServiceDetail({
                   ></div>
                 </div>
                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {service.cpu ? `${cpuPercentage.toFixed(1)}% utilized` : "No data available"}
+                  {metricsInsight?.cpu?.processUsage ? 
+                    `${metricsInsight.cpu.processUsage}% utilized` : 
+                    service.cpu ? `${cpuPercentage.toFixed(1)}% utilized` : "No data available"}
                 </div>
               </div>
               <div className="mt-4">
@@ -463,6 +472,150 @@ export function ServiceDetail({
                 </div>
               </div>
             </div>
+
+            {/* Additional metrics from insights */}
+            {metricsInsight && (
+              <>
+                {/* Threads */}
+                {metricsInsight.threads && (
+                  <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Thread Information</div>
+                    <div className="mt-3 space-y-2">
+                      {metricsInsight.threads.liveThreads && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Live Threads:</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{metricsInsight.threads.liveThreads}</span>
+                        </div>
+                      )}
+                      {metricsInsight.threads.daemonThreads && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Daemon Threads:</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{metricsInsight.threads.daemonThreads}</span>
+                        </div>
+                      )}
+                      {metricsInsight.threads.peakThreads && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Peak Threads:</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{metricsInsight.threads.peakThreads}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Uptime */}
+                {metricsInsight.uptime && (
+                  <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Uptime Information</div>
+                    <div className="mt-3 space-y-2">
+                      {metricsInsight.uptime.uptime && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Uptime:</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{metricsInsight.uptime.uptime}</span>
+                        </div>
+                      )}
+                      {metricsInsight.uptime.startTime && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Start Time:</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{metricsInsight.uptime.startTime}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Disk */}
+                {metricsInsight.disk && (
+                  <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Disk Usage</div>
+                    <div className="mt-1 flex items-baseline">
+                      <div className="text-2xl font-semibold text-gray-900 dark:text-white">
+                        {metricsInsight.disk.usagePercentage ? `${metricsInsight.disk.usagePercentage}%` : "--"}
+                      </div>
+                      <div className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                        {metricsInsight.disk.total ? `of ${metricsInsight.disk.total}` : ""}
+                      </div>
+                    </div>
+                    {metricsInsight.disk.usagePercentage && (
+                      <div className="mt-3">
+                        <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div 
+                            className={cn("h-2 rounded-full", getResourceUtilizationClass(metricsInsight.disk.usagePercentage))}
+                            style={{ width: `${metricsInsight.disk.usagePercentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="mt-3 space-y-2">
+                      {metricsInsight.disk.free && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Free Space:</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{metricsInsight.disk.free}</span>
+                        </div>
+                      )}
+                      {metricsInsight.disk.usable && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Usable Space:</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{metricsInsight.disk.usable}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Thread Pool */}
+                {metricsInsight.threadPool && (
+                  <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Thread Pool</div>
+                    <div className="mt-3 space-y-2">
+                      {metricsInsight.threadPool.activeThreads && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Active Threads:</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{metricsInsight.threadPool.activeThreads}</span>
+                        </div>
+                      )}
+                      {metricsInsight.threadPool.poolSize && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Pool Size:</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{metricsInsight.threadPool.poolSize}</span>
+                        </div>
+                      )}
+                      {metricsInsight.threadPool.corePoolSize && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Core Pool Size:</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{metricsInsight.threadPool.corePoolSize}</span>
+                        </div>
+                      )}
+                      {metricsInsight.threadPool.maxPoolSize && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Max Pool Size:</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{metricsInsight.threadPool.maxPoolSize}</span>
+                        </div>
+                      )}
+                      {metricsInsight.threadPool.queuedTasks && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Queued Tasks:</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{metricsInsight.threadPool.queuedTasks}</span>
+                        </div>
+                      )}
+                      {metricsInsight.threadPool.usagePercentage && (
+                        <div className="mt-3">
+                          <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div 
+                              className={cn("h-2 rounded-full", getResourceUtilizationClass(metricsInsight.threadPool.usagePercentage))}
+                              style={{ width: `${metricsInsight.threadPool.usagePercentage}%` }}
+                            ></div>
+                          </div>
+                          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {`${metricsInsight.threadPool.usagePercentage}% utilized`}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
             </CardContent>
           </CollapsibleContent>
@@ -483,7 +636,7 @@ export function ServiceDetail({
               >
                 <Link className="h-4 w-4" />
               </Button>
-              
+
               <Button 
                 variant="link" 
                 className="p-0 h-auto font-medium text-lg text-gray-900 dark:text-white hover:no-underline hover:opacity-80"
@@ -527,7 +680,7 @@ export function ServiceDetail({
           </CollapsibleContent>
         </Card>
       </Collapsible>
-      
+
       {/* Log Level Management Section - Collapsible */}
       <Collapsible open={logLevelOpen} onOpenChange={setLogLevelOpen} className="w-full" id="loglevels">
         <Card>
@@ -542,7 +695,7 @@ export function ServiceDetail({
               >
                 <Link className="h-4 w-4" />
               </Button>
-              
+
               <Button 
                 variant="link" 
                 className="p-0 h-auto font-medium text-lg text-gray-900 dark:text-white hover:no-underline hover:opacity-80"
@@ -603,7 +756,7 @@ export function ServiceDetail({
                   >
                     <Link className="h-4 w-4" />
                   </Button>
-                  
+
                   <Button 
                     variant="link" 
                     className="p-0 h-auto font-medium text-lg text-gray-900 dark:text-white hover:no-underline hover:opacity-80"
@@ -661,7 +814,7 @@ export function ServiceDetail({
                     </>
                   )}
                 </Button>
-                
+
                 <Button 
                   size="sm"
                   variant="outline"
@@ -718,12 +871,12 @@ export function ServiceDetail({
                 </Select>
               </div>
             </div>
-            
+
             <CardContent className="p-0 border-t border-gray-200 dark:border-gray-700">
               <div className="overflow-x-auto">
                 <LogTable logs={realtimeLogs ? wsLogs : filteredLogs} loading={realtimeLogs && wsLogs.length === 0} />
               </div>
-              
+
               <div className="bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
                 <div className="flex-1 flex justify-between sm:hidden">
                   <Button variant="outline" size="sm" disabled>Previous</Button>

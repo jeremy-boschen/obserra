@@ -31,6 +31,7 @@ public interface Storage {
     Optional<Service> getServiceByAppId(String appId);
     Service createService(Service service);
     Service updateService(String id, Service service);
+    Service updateServiceByAppId(String appId, Service service);
     Service updateServiceStatus(String id, ServiceStatus status);
     Service updateServiceLastSeen(String id);
     void deleteService(String id);

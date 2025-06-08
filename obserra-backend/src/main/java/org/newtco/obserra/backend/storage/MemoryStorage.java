@@ -17,10 +17,12 @@ import org.newtco.obserra.backend.model.Metric;
 import org.newtco.obserra.backend.model.Service;
 import org.newtco.obserra.backend.model.ServiceStatus;
 import org.newtco.obserra.backend.model.User;
+import org.springframework.stereotype.Component;
 
 /**
  * In-memory implementation of the Storage interface. This class stores all data in memory using Maps.
  */
+@Component
 public class MemoryStorage implements Storage {
     private final Map<String, User>                 users            = new ConcurrentHashMap<>();
     private final Map<String, Service>              services         = new ConcurrentHashMap<>();
@@ -103,6 +105,17 @@ public class MemoryStorage implements Storage {
                 .setLastSeen(LocalDateTime.MIN);
 
         return existingService;
+    }
+
+    @Override
+    public Service updateServiceByAppId(String appId, Service service) {
+        var existing = getServiceByAppId(appId);
+        if (existing.isEmpty()) {
+            return createService(service);
+        }
+
+        return existing.get().update(service)
+            .setLastSeen(LocalDateTime.MIN);
     }
 
     @Override
