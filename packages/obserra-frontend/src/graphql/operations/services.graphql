@@ -1,0 +1,67 @@
+
+fragment ServiceUptime on ServiceInsights {
+    metrics {
+        uptime {
+            startTime
+            uptime
+        }
+    }
+}
+
+# Fragment to fetch memory usage details from ServiceInsights
+# Includes used, max, and usage percentage of memory
+fragment ServiceMemoryUsage on ServiceInsights {
+    metrics {
+        memory {
+            used
+            max
+            maxHeap
+            maxNonHeap
+            usagePercentage
+        }
+    }
+}
+
+# Fragment to fetch CPU usage details from ServiceInsights
+# Includes process, system usage, and available processors
+fragment ServiceCpuUsage on ServiceInsights {
+    metrics {
+        cpu {
+            processUsage
+            systemUsage
+            availableProcessors
+        }
+    }
+}
+
+fragment ServiceSummary on Service {
+    id
+    name
+    app
+    version
+    namespace
+    status
+    updated
+}
+
+# Fragment to represent a Service with insights
+# Combines core service info with memory and CPU usage details
+fragment ServiceInfo on Service {
+    ...ServiceSummary
+
+    insights {
+        ...ServiceMemoryUsage
+        ...ServiceCpuUsage
+        ...ServiceUptime
+    }
+}
+
+# Query to fetch a list of all services with their insights
+# Uses the ServiceInfo fragment for detailed info
+query GetServices {
+    services {
+        ...ServiceInfo
+    }
+}
+
+

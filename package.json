@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build:dashboard": "npm --prefix obserra-frontend run build",
-    "start:dashboard": "npm --prefix obserra-frontend run dev"
+    "build:dashboard": "yarn --cwd obserra-frontend build",
+    "start:dashboard": "yarn --cwd obserra-frontend dev"
   }
 }

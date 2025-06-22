@@ -1,0 +1,19 @@
+# Build output
+dist
+build
+
+# Node modules
+node_modules
+
+# Generated files
+src/graphql/generated.ts
+schema.graphql
+
+# Cache
+.cache
+.eslintcache
+
+# Config files
+vite.config.ts
+tailwind.config.js
+postcss.config.js

@@ -1,0 +1,166 @@
+# Using scalars from ExtendedScalars for complex objects like maps
+scalar Object
+scalar Date
+scalar Time
+scalar DateTime
+scalar JSON
+
+
+# Service status enum
+enum ServiceStatus {
+  UP
+  DOWN
+  PENDING
+  WARNING
+  UNKNOWN
+}
+
+# Health insight type
+type HealthInsight {
+  status: String!
+  components: [HealthComponentEntry!]
+}
+
+# Health component entry type (for map representation)
+type HealthComponentEntry {
+  name: String!
+  component: HealthComponent!
+}
+
+# Health component type
+type HealthComponent {
+  status: String!
+  details: JSON
+}
+
+# Thread pool metrics type
+type ThreadPoolInsight {
+  poolSize: String
+  activeThreads: String
+  corePoolSize: String
+  maxPoolSize: String
+  queuedTasks: String
+  usagePercentage: Float
+}
+
+# Metrics insight type
+type MetricsInsight {
+  memory: MemoryInsight!
+  cpu: CPUInsight!
+  threads: ThreadInsight!
+  threadPool: ThreadPoolInsight!
+  uptime: UptimeInsight!
+  disk: DiskInsight!
+}
+
+# Memory metrics type
+type MemoryInsight {
+  max: String
+  maxHeap: String
+  maxNonHeap: String
+  committed: String
+  used: String
+  liveDataSize: String
+  maxDataSize: String
+  usagePercentage: Float
+}
+
+# CPU metrics type
+type CPUInsight {
+  processUsage: Float
+  systemUsage: Float
+  availableProcessors: Int
+}
+
+# Thread metrics type
+type ThreadInsight {
+  liveThreads: Int
+  daemonThreads: Int
+  peakThreads: Int
+}
+
+# Uptime metrics type
+type UptimeInsight {
+  uptime: String
+  startTime: String
+}
+
+# Disk metrics type
+type DiskInsight {
+  total: String
+  free: String
+  usage: Float
+}
+
+type Logger {
+  name: String!
+  effectiveLevel: String!
+  configuredLevel: String
+}
+
+type LogGroup {
+  name: String!
+  members: [String!]!
+}
+
+type LoggersInsight {
+  levels: [String!]!
+  loggers(name: String): [Logger]!
+  groups(name: String): [LogGroup]!
+}
+
+# Log type
+type Log {
+  id: ID!
+  serviceId: ID!
+  timestamp: String!
+  level: String!
+  message: String!
+  logger: String
+  thread: String
+  exception: String
+}
+
+# Service insights type
+type ServiceInsights {
+  health: HealthInsight!
+  metrics: MetricsInsight!
+  memory: MemoryInsight!
+  cpu: CPUInsight!
+  thread: ThreadInsight!
+  uptime: UptimeInsight!
+  disk: DiskInsight!
+  loggers: LoggersInsight!
+}
+
+
+# Service type
+type Service {
+  id: ID!
+  app: String!
+  name: String!
+  version: String
+  namespace: String
+  status: ServiceStatus!
+  updated: DateTime!
+  insights: ServiceInsights!
+}
+
+
+# Root query type
+type Query {
+  # Get all services
+  services: [Service!]!
+
+  # Get a specific service by ID
+  service(id: ID!): Service
+
+  # Get logs for a specific service
+  logs(serviceId: ID!, limit: Int = 100): [Log!]!
+}
+
+# Subscription type for real-time data
+type Subscription {
+  # Subscribe to logs for a specific service
+  logStream(serviceId: ID!): [Log!]!
+}

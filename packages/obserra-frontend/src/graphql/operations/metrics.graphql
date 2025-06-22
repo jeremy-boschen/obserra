@@ -1,0 +1,74 @@
+fragment CPUMetrics on CPUInsight {
+    availableProcessors
+    processUsage
+    systemUsage
+}
+
+fragment DiskMetrics on DiskInsight {
+    free
+    total
+    usable
+    usagePercentage
+}
+
+fragment MemoryMetrics on MemoryInsight {
+    committed
+    liveDataSize
+    max
+    maxDataSize
+    maxHeap
+    maxNonHeap
+    usagePercentage
+    used
+}
+
+fragment ThreadMetrics on ThreadInsight {
+    liveThreads
+    daemonThreads
+    peakThreads
+}
+
+fragment ThreadPoolMetrics on ThreadPoolInsight {
+    activeThreads
+    corePoolSize
+    maxPoolSize
+    poolSize
+    queuedTasks
+    usagePercentage
+}
+
+fragment UptimeMetrics on UptimeInsight {
+    startTime
+    uptime
+}
+
+fragment ServiceMetrics on MetricsInsight {
+    cpu {
+        ...CPUMetrics
+    }
+    disk {
+        ...DiskMetrics
+    }
+    memory {
+        ...MemoryMetrics
+    }
+    threadPool {
+        ...ThreadPoolMetrics
+    }
+    threads {
+        ...ThreadMetrics
+    }
+    uptime {
+        ...UptimeMetrics
+    }
+}
+
+query GetServiceMetrics($serviceId: ID!) {
+    service(id: $serviceId) {
+        insights {
+            metrics {
+                ...ServiceMetrics
+            }
+        }
+    }
+}

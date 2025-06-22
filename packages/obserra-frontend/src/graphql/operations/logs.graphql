@@ -1,0 +1,25 @@
+
+fragment LogFields on Log {
+  id
+  serviceId
+  timestamp
+  level
+  message
+  logger
+  thread
+  exception
+}
+
+# Query to fetch logs for a specific service
+query GetServiceLogs($serviceId: ID!, $limit: Int) {
+  logs(serviceId: $serviceId, limit: $limit) {
+    ...LogFields
+  }
+}
+
+# Subscription for real-time log streaming
+subscription ServiceLogStream($serviceId: ID!) {
+  logStream(serviceId: $serviceId) {
+    ...LogFields
+  }
+}

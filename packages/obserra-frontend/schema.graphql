@@ -1,0 +1,118 @@
+schema {
+  query: Query
+  subscription: Subscription
+}
+
+type CPUInsight {
+  availableProcessors: Int
+  processUsage: Float
+  systemUsage: Float
+}
+
+type DiskInsight {
+  free: String
+  total: String
+  usable: String
+  usagePercentage: Float
+}
+
+type HealthComponent {
+  details: Object
+  status: String!
+}
+
+type HealthComponentEntry {
+  component: HealthComponent!
+  name: String!
+}
+
+type HealthInsight {
+  components: [HealthComponentEntry!]
+  status: String!
+}
+
+type Log {
+  exception: String
+  id: ID!
+  level: String!
+  logger: String
+  message: String!
+  serviceId: ID!
+  thread: String
+  timestamp: String!
+}
+
+type MemoryInsight {
+  committed: String
+  liveDataSize: String
+  max: String
+  maxDataSize: String
+  maxHeap: String
+  maxNonHeap: String
+  usagePercentage: Float
+  used: String
+}
+
+type MetricsInsight {
+  cpu: CPUInsight!
+  disk: DiskInsight!
+  memory: MemoryInsight!
+  threadPool: ThreadPoolInsight!
+  threads: ThreadInsight!
+  uptime: UptimeInsight!
+}
+
+scalar Object
+
+type Query {
+  logs(limit: Int = 100, serviceId: ID!): [Log!]!
+  service(id: ID!): Service
+  services: [Service!]!
+}
+
+type Service {
+  app: String!
+  id: ID!
+  insights: ServiceInsights
+  name: String!
+  namespace: String
+  status: ServiceStatus!
+  updated: String!
+  version: String
+}
+
+type ServiceInsights {
+  health: HealthInsight!
+  metrics: MetricsInsight!
+}
+
+enum ServiceStatus {
+  DOWN
+  UNKNOWN
+  UP
+  WARNING
+}
+
+type Subscription {
+  logStream(serviceId: ID!): [Log!]!
+}
+
+type ThreadInsight {
+  daemonThreads: Int
+  liveThreads: Int
+  peakThreads: Int
+}
+
+type ThreadPoolInsight {
+  activeThreads: String
+  corePoolSize: String
+  maxPoolSize: String
+  poolSize: String
+  queuedTasks: String
+  usagePercentage: Float
+}
+
+type UptimeInsight {
+  startTime: String
+  uptime: String
+}

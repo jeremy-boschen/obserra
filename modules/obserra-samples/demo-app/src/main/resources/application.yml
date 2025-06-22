@@ -1,0 +1,59 @@
+# Application Configuration
+spring:
+  application:
+    name: demo-app
+    version: 1.0.0
+  task:
+    execution:
+      pool:
+        core-size: 5
+        max-size: 20        # ← this drives executor.pool.max
+        queue-capacity: 500
+    scheduling:
+      pool:
+        size: 10            # drives executor.pool.max for the scheduler
+
+server:
+  port: 8080
+
+logging:
+  level:
+    org.springframework.boot.actuate.endpoint: TRACE
+
+# Spring Boot Actuator Configuration
+management:
+  server:
+    port: 8181
+    ssl:
+      enabled: false
+    address: 127.0.0.1
+
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+      base-path: /management
+
+  endpoint:
+    health:
+      show-details: always
+
+# Application Info (used for dashboard)
+info:
+  app:
+    name: ${spring.application.name}
+    version: 1.0.0
+    description: Demo Application for Spring Boot Monitoring
+    contact:
+      email: admin@example.com
+
+# Boot Monitoring Dashboard Configuration
+obserra:
+  enabled: true
+  registration-server: http://localhost:5000
+  app-id: "${spring.application.name}"
+  app-name: "${spring.application.name}"
+  app-description: Demo application service
+  app-version: "${spring.application.version}"
+  check-interval: 15s
+  update-interval: 5s

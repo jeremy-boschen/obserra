@@ -1,5 +1,5 @@
 modules = ["nodejs-20", "web", "postgresql-16"]
-run = "npm --prefix ./obserra-dashboard run dev"
+run = "yarn --cwd ./obserra-frontend dev"
 hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
@@ -7,8 +7,8 @@ channel = "stable-24_05"
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["npm", "--prefix ./obserra-dashboard", "run", "build"]
-run = ["npm", "--prefix ./obserra-dashboard", "run", "start"]
+build = ["yarn", "--cwd ./obserra-frontend", "build"]
+run = ["yarn", "--cwd ./obserra-frontend", "preview"]
 
 [[ports]]
 localPort = 3000
@@ -37,7 +37,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm --prefix ./obserra-dashboard run dev"
+args = "yarn --cwd ./obserra-frontend dev"
 
 [[workflows.workflow]]
 name = "Install application"
@@ -46,4 +46,4 @@ author = 42209403
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm --prefix ./obserra-dashboard install"
+args = "yarn --cwd ./obserra-frontend install"

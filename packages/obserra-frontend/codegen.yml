@@ -1,0 +1,29 @@
+overwrite: true
+schema: "../obserra-backend/src/main/resources/schema/schema.graphql"
+documents:
+  - "src/**/*.graphql"
+hooks:
+  afterOneFileWrite:
+    - "prettier --write"
+ignoreNoDocuments: true
+generates:
+  "./src/graphql/generated.ts":
+    plugins:
+      - typescript
+      - typescript-operations
+      - typescript-urql
+    config:
+      preResolveTypes: true
+      withHooks: true
+      withComponent: false
+      withHOC: false
+      useTypeImports: true
+      dedupeFragments: true
+      inlineFragmentTypes: combine
+      omitOperationSuffix: true
+      skipTypename: true
+  "./schema.graphql":
+    plugins:
+      - "schema-ast"
+    config:
+      includeDirectives: true
