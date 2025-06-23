@@ -42,7 +42,7 @@ public class LoggersCollector implements ActuatorCollector<LoggersProperties> {
 
     @Nonnull
     @Override
-    public Class<?> type() {
+    public Class<?> collectedType() {
         return ObLoggers.class;
     }
 
@@ -66,7 +66,7 @@ public class LoggersCollector implements ActuatorCollector<LoggersProperties> {
         logger.debug("Loggers check for service {} returned {} loggers, {} groups",
                      service.getName(), data.loggers().size(), data.groups().size());
 
-        service.collectorData(type(), data);
+        service.updateCollectorData(collectedType(), data);
     }
 
     @NotNull

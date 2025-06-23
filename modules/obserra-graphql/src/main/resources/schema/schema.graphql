@@ -18,7 +18,7 @@ enum ServiceStatus {
 # Health insight type
 type HealthInsight {
   status: String!
-  components: [HealthComponentEntry!]
+  components(name: String): [HealthComponentEntry!]
 }
 
 # Health component entry type (for map representation)
@@ -45,12 +45,12 @@ type ThreadPoolInsight {
 
 # Metrics insight type
 type MetricsInsight {
-  memory: MemoryInsight!
-  cpu: CPUInsight!
-  threads: ThreadInsight!
-  threadPool: ThreadPoolInsight!
-  uptime: UptimeInsight!
-  disk: DiskInsight!
+  memory: MemoryInsight
+  cpu: CPUInsight
+  threads: ThreadInsight
+  threadPool: ThreadPoolInsight
+  uptime: UptimeInsight
+  disk: DiskInsight
 }
 
 # Memory metrics type
@@ -123,14 +123,14 @@ type Log {
 
 # Service insights type
 type ServiceInsights {
-  health: HealthInsight!
-  metrics: MetricsInsight!
-  memory: MemoryInsight!
-  cpu: CPUInsight!
-  thread: ThreadInsight!
-  uptime: UptimeInsight!
-  disk: DiskInsight!
-  loggers: LoggersInsight!
+  health: HealthInsight
+  metrics: MetricsInsight
+  memory: MemoryInsight
+  cpu: CPUInsight
+  thread: ThreadInsight
+  uptime: UptimeInsight
+  disk: DiskInsight
+  loggers: LoggersInsight
 }
 
 

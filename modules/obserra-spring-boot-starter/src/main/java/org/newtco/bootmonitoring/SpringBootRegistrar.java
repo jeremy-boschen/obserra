@@ -3,8 +3,10 @@ package org.newtco.bootmonitoring;
 import java.util.UUID;
 
 import org.newtco.obserra.shared.model.ServiceRegistration;
+import org.newtco.obserra.shared.model.ServiceRegistration.Request.Platform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.SpringBootVersion;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
@@ -140,6 +142,9 @@ public class SpringBootRegistrar {
                 .setAppId(monitorProperties.getAppId())
                 .setServiceId(idGenerator.generate())
                 .setVersion(version)
+                .setPlatform(new Platform()
+                                 .setName("SpringBoot")
+                                 .setVersion(SpringBootVersion.getVersion()))
                 .setActuatorUrl(managementPath)
                 .setActuatorPort(managementPort)
                 .setCheckInterval(monitorProperties.getCheckInterval())

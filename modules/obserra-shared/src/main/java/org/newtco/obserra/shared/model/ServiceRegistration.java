@@ -3,6 +3,7 @@ package org.newtco.obserra.shared.model;
 import java.time.Duration;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class ServiceRegistration {
@@ -19,6 +20,9 @@ public class ServiceRegistration {
         @JsonProperty("appId")
         private String appId;
 
+        @JsonProperty("serviceType")
+        private String serviceType;
+
         /**
          * Unique identifier for the service's instance. This should change each time the service is restarted.
          */
@@ -27,6 +31,12 @@ public class ServiceRegistration {
 
         @JsonProperty("version")
         private String version;
+
+        /**
+         * The platform/framework running the service being registered
+         */
+        @JsonProperty("platform")
+        private Platform platform;
 
         @JsonProperty("actuatorUrl")
         private String actuatorUrl;
@@ -52,6 +62,24 @@ public class ServiceRegistration {
 
         public Request setName(String name) {
             this.name = name;
+            return this;
+        }
+
+        public String getServiceType() {
+            return serviceType;
+        }
+
+        public Request setServiceType(String serviceType) {
+            this.serviceType = serviceType;
+            return this;
+        }
+
+        public Platform getPlatform() {
+            return platform;
+        }
+
+        public Request setPlatform(Platform platform) {
+            this.platform = platform;
             return this;
         }
 
@@ -113,6 +141,11 @@ public class ServiceRegistration {
             return autoRegister;
         }
 
+        public Request setAutoRegister(boolean autoRegister) {
+            this.autoRegister = autoRegister;
+            return this;
+        }
+
         public Request setAutoRegister(Boolean autoRegister) {
             this.autoRegister = autoRegister;
             return this;
@@ -131,7 +164,43 @@ public class ServiceRegistration {
                    ", autoRegister=" + autoRegister +
                    '}';
         }
+
+
+        /**
+         * The platform/framework running the service being registered. For example, Spring Boot 3.0.0, or Kubernetes
+         * 1.2.5
+         */
+        @JsonInclude(Include.NON_NULL)
+        public static class Platform {
+            @JsonProperty("name")
+            private String name;
+
+            @JsonProperty("version")
+            private String version;
+
+            public Platform() {
+            }
+
+            public String getName() {
+                return name;
+            }
+
+            public Platform setName(String name) {
+                this.name = name;
+                return this;
+            }
+
+            public String getVersion() {
+                return version;
+            }
+
+            public Platform setVersion(String version) {
+                this.version = version;
+                return this;
+            }
+        }
     }
+
 
     /**
      * Response payload for registering a service with the monitoring dashboard. This class represents the data returned

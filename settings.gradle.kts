@@ -8,7 +8,7 @@ println("GRADLE_HOME:    ${System.getenv("GRADLE_HOME")}")
 
 
 fun includeProject(path: String) {
-    val dir = file("modules/$path")
+    val dir = file(path)
     val name = ":${dir.name}"
 
     settings.include(name)
@@ -17,8 +17,8 @@ fun includeProject(path: String) {
     prj.projectDir = dir
 }
 
-includeProject("graphql")
-includeProject("obserra-shared")
-includeProject("obserra-backend")
-includeProject("obserra-spring-boot-starter")
-includeProject("obserra-samples/demo-app")
+includeProject("modules/obserra-graphql")
+includeProject("modules/obserra-shared")
+includeProject("modules/obserra-backend")
+includeProject("modules/obserra-spring-boot-starter")
+includeProject("modules/obserra-samples/demo-app")

@@ -11,7 +11,6 @@ import org.newtco.obserra.backend.model.ObService;
 import org.newtco.obserra.graphql.client.types.LogGroup;
 import org.newtco.obserra.graphql.client.types.Logger;
 import org.newtco.obserra.graphql.client.types.LoggersInsight;
-import org.newtco.obserra.graphql.client.types.MetricsInsight;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,7 +27,7 @@ public class LoggersInsightProvider implements ServiceInsightProvider<LoggersIns
     @Override
     public LoggersInsight provide(ObService service) {
         //noinspection DeconstructionCanBeUsed
-        if (service.collectorData(insightType()) instanceof ObLoggers data) {
+        if (service.getCollectorData(ObLoggers.class) instanceof ObLoggers data) {
             return new LoggersInsight(data.levels(),
                                       data.loggers().entrySet().stream()
                                           .map(this::toLogger)

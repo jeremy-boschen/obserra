@@ -21,7 +21,7 @@ import org.springframework.web.client.RestClient;
 @Component("actuatorDiscoveryService")
 public class DiscoveryService {
 
-    private static final Logger logger = LoggerFactory.getLogger(DiscoveryService.class);
+    private static final Logger log = LoggerFactory.getLogger(DiscoveryService.class);
 
     private final RestClient                 webClient;
     private final List<ActuatorCollector<?>> collectors;
@@ -43,7 +43,7 @@ public class DiscoveryService {
      * @return A list of discovered actuator endpoints
      */
     public List<ActuatorEndpoint> discoverServiceEndpoints(ObService service) {
-        logger.debug("Discovering Spring Boot actuator endpoints for service: {} ({})", service.getName(), service.getId());
+        log.debug("Discovering Spring Boot actuator endpoints for service: {} ({})", service.getName(), service.getId());
 
         try {
             var actuatorLinks = webClient.get()
@@ -62,7 +62,7 @@ public class DiscoveryService {
                     .toList();
             }
         } catch (HttpStatusCodeException e) {
-            logger.error("Error discovering Spring Boot actuator endpoints for service {}: {}", service.getName(), e.getMessage(), e);
+            log.error("Error discovering Spring Boot actuator endpoints for service {}: {}", service.getName(), e.getMessage(), e);
         }
 
         return List.of();
@@ -70,7 +70,7 @@ public class DiscoveryService {
 
     private boolean isSupportedActuator(ActuatorEndpoint endpoint) {
         for (var collector : collectors) {
-            if (collector.canCollect(endpoint)) {
+            if (collector.canCollectForEndpoint(endpoint)) {
                 return true;
             }
         }

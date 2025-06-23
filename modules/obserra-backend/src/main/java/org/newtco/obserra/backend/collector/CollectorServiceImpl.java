@@ -21,11 +21,13 @@ import org.newtco.obserra.backend.collector.config.properties.CollectionProperti
 import org.newtco.obserra.backend.config.properties.CircuitBreakerProperties;
 import org.newtco.obserra.backend.core.concurrent.RunnableTaskScope;
 import org.newtco.obserra.backend.core.concurrent.TaskScopeFactory;
+import org.newtco.obserra.backend.events.ServiceRegistrationEvent;
 import org.newtco.obserra.backend.model.ObService;
 import org.newtco.obserra.backend.storage.Storage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
@@ -102,6 +104,12 @@ public class CollectorServiceImpl implements CollectorService {
         stateManager.pruneInactiveServices(services);
 
         runServices(services);
+    }
+
+    @EventListener
+    public void onServiceRegistered(ServiceRegistrationEvent event) {
+        storage.getService(event.getServiceId())
+            .ifPresent(this::collectServiceDataNow);
     }
 
     /**
@@ -201,7 +209,7 @@ public class CollectorServiceImpl implements CollectorService {
                 return;
             }
 
-            try (var scope = taskScopeFactory.create("svc/" + service.getId() + "/col/" + collector.type())) {
+            try (var scope = taskScopeFactory.create("svc/" + service.getId() + "/col/" + collector.name())) {
                 var task = scope.fork(() -> {
                     collector.collect(service);
                     return null;
@@ -232,7 +240,7 @@ public class CollectorServiceImpl implements CollectorService {
             }
         } catch (InterruptedException e) {
             // Parent scope was closed
-            logger.warn("Collector {}/{} was interrupted, likely by parent scope shutting down", service.getId(), collector.type());
+            logger.warn("Collector {}/{} was interrupted, likely by parent scope shutting down", service.getId(), collector.name());
 
             Thread.currentThread().interrupt();
             return;
@@ -384,7 +392,7 @@ public class CollectorServiceImpl implements CollectorService {
         }
 
         private CollectorState collectorState(Collector<?> collector) {
-            return collectorStates.computeIfAbsent(stateId + "/" + collector.type(),
+            return collectorStates.computeIfAbsent(stateId + "/" + collector.name(),
                                                    collectorKey -> new CollectorState(collectorKey,
                                                                                       collector.properties()));
         }
@@ -493,7 +501,7 @@ public class CollectorServiceImpl implements CollectorService {
                     return false;
                 }
 
-                if (error instanceof CollectionException ce) {
+                if (error instanceof CollectorException ce) {
                     return ce.isRetriable();
                 }
 

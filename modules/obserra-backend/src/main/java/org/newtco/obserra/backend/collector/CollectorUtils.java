@@ -12,18 +12,17 @@ import org.springframework.web.client.ResponseErrorHandler;
 
 public class CollectorUtils {
     private CollectorUtils() {
-        // Utility class should not be instantiated
     }
 
-   public static CollectionException fromConnectionError(ObService service, Collector<?> collector, Exception e) {
-       var message = "Connection failed while collecting %s data for service %s: %s".formatted(
-               collector.type(),
-               service.getName(),
-               e.getMessage());
-               
-       // Connection errors are typically retriable
-       return new CollectionException(message, e, true);
-   }
+    public static CollectorException fromConnectionError(ObService service, Collector<?> collector, Exception e) {
+        var message = "Connection failed while collecting %s data for service %s: %s".formatted(
+            collector.name(),
+            service.getName(),
+            e.getMessage());
+
+        // Connection errors are typically retriable
+        return new CollectorException(message, e, true);
+    }
 
     /**
      * Standard error handler for a RestClient that converts HTTP errors to CollectionExceptions.
@@ -45,9 +44,9 @@ public class CollectorUtils {
 
         @Override
         public void handleError(@Nonnull URI url, @Nonnull HttpMethod method, ClientHttpResponse response) throws IOException {
-            var status = response.getStatusCode();
+            var    status       = response.getStatusCode();
             String responseBody = null;
-            
+
             // Try to read the response body if available
             try (var bodyStream = response.getBody()) {
                 byte[] bytes = bodyStream.readAllBytes();
@@ -57,18 +56,18 @@ public class CollectorUtils {
             } catch (Exception e) {
                 // Ignore errors reading the body
             }
-            
+
             var message = "Collection of %s data for service %s failed with HTTP %d: %s".formatted(
-                    type,
-                    service,
-                    status.value(),
-                    response.getStatusText());
-                    
+                type,
+                service,
+                status.value(),
+                response.getStatusText());
+
             if (responseBody != null) {
                 message += " - Response: " + responseBody;
             }
 
-            throw new CollectionException(message, null, isRetriable(status.value()));
+            throw new CollectorException(message, null, isRetriable(status.value()));
         }
 
         private boolean isRetriable(int status) {

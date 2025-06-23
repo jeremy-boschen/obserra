@@ -30,6 +30,7 @@ public class ObService {
     private       String                 appId;
     private       Boolean                autoRegister       = false;
     private       Duration               checkInterval;
+    private       Platform               platform;
     private       List<ActuatorEndpoint> actuatorEndpoints  = new ArrayList<>();
     private final Map<String, Object>    collectorData      = new LinkedHashMap<>();
 
@@ -164,6 +165,15 @@ public class ObService {
         return this;
     }
 
+    public Platform getPlatform() {
+        return platform;
+    }
+
+    public ObService setPlatform(Platform platform) {
+        this.platform = platform;
+        return this;
+    }
+
     public List<ActuatorEndpoint> getActuatorEndpoints() {
         return actuatorEndpoints;
     }
@@ -193,30 +203,29 @@ public class ObService {
      * @return The actuator endpoint, or null if not found
      */
     public Optional<ActuatorEndpoint> findActuatorEndpoint(String id) {
-        if (this.actuatorEndpoints == null) {
-            return Optional.empty();
+        if (this.actuatorEndpoints != null) {
+            for (ActuatorEndpoint endpoint : this.actuatorEndpoints) {
+                if (endpoint.isEnabled() && id.equals(endpoint.getType())) {
+                    return Optional.of(endpoint);
+                }
+            }
         }
-        return this.actuatorEndpoints.stream()
-            .filter(endpoint -> id.equals(endpoint.getType()))
-            .findFirst()
-            .filter(ActuatorEndpoint::isEnabled);
+        return Optional.empty();
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T collectorData(Class<?> type) {
+    public <T> T getCollectorData(Class<T> type) {
         return (T) collectorData.get(type.getSimpleName());
     }
 
-    public ObService collectorData(Class<?> type, Object data) {
+    @SuppressWarnings("unchecked")
+    public <T> T getCollectorData(String type) {
+        return (T) collectorData.get(type);
+    }
+
+    public void updateCollectorData(Class<?> type, Object data) {
         this.collectorData.put(type.getSimpleName(), data);
-        return this;
     }
-
-    public ObService collectorData(Object data) {
-        this.collectorData.put(data.getClass().getSimpleName(), data);
-        return this;
-    }
-
 
     /**
      * Get the service data collected by collectors

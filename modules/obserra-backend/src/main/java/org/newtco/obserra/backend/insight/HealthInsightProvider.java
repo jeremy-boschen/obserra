@@ -5,7 +5,7 @@ import java.util.List;
 
 import org.newtco.obserra.backend.collector.config.properties.CollectionProperties;
 import org.newtco.obserra.backend.collector.config.properties.SpringBootProperties;
-import org.newtco.obserra.backend.model.HealthData;
+import org.newtco.obserra.backend.model.HealthEndpointResponseV3;
 import org.newtco.obserra.backend.model.ObService;
 import org.newtco.obserra.graphql.client.types.HealthComponent;
 import org.newtco.obserra.graphql.client.types.HealthComponentEntry;
@@ -31,8 +31,7 @@ public class HealthInsightProvider implements ServiceInsightProvider<HealthInsig
 
     @Override
     public HealthInsight provide(ObService service) {
-        var data = service.collectorData(insightType());
-        if (data instanceof HealthData health) {
+        if (service.getCollectorData(HealthEndpointResponseV3.class) instanceof HealthEndpointResponseV3 health) {
             return new HealthInsight(health.status(),
                                      extractComponents(health));
 
@@ -41,7 +40,7 @@ public class HealthInsightProvider implements ServiceInsightProvider<HealthInsig
         return new HealthInsight();
     }
 
-    private List<HealthComponentEntry> extractComponents(HealthData health) {
+    private List<HealthComponentEntry> extractComponents(HealthEndpointResponseV3 health) {
         if (healthProperties.showComponents()) {
             var components = new ArrayList<HealthComponentEntry>();
             health.components().forEach((name, component) -> {

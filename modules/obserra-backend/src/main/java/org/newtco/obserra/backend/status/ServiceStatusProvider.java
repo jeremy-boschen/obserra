@@ -1,8 +1,7 @@
-package org.newtco.obserra.backend.insight;
+package org.newtco.obserra.backend.status;
 
 import jakarta.annotation.Nonnull;
 
-import org.newtco.obserra.backend.model.NamedStatus;
 import org.newtco.obserra.backend.model.ObService;
 import org.newtco.obserra.backend.model.ObServiceStatus;
 
@@ -11,7 +10,7 @@ import static org.newtco.obserra.backend.util.StringUtils.upper;
 public interface ServiceStatusProvider {
 
     @Nonnull
-    String type();
+    Class<?> type();
 
     /**
      * Evaluate the collected data and determine the service status.
@@ -23,7 +22,7 @@ public interface ServiceStatusProvider {
      */
     @Nonnull
     default ObServiceStatus status(ObService service) {
-        if (service.collectorData(type()) instanceof NamedStatus data) {
+        if (service.getCollectorData(type()) instanceof NamedStatus data) {
             return switch (upper(data.status())) {
                 case "UP" -> ObServiceStatus.UP;
                 case "DOWN" -> ObServiceStatus.DOWN;

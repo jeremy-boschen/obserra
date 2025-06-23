@@ -1,14 +1,13 @@
 package org.newtco.obserra.backend.graphql;
 
 import java.util.List;
-import java.util.Optional;
 
 import com.netflix.graphql.dgs.DgsComponent;
 import com.netflix.graphql.dgs.DgsQuery;
 import com.netflix.graphql.dgs.InputArgument;
 import org.newtco.obserra.backend.insight.ServiceInsightProvider;
-import org.newtco.obserra.backend.insight.ServiceStatusProvider;
 import org.newtco.obserra.backend.model.ObService;
+import org.newtco.obserra.backend.status.ServiceStatusProvider;
 import org.newtco.obserra.backend.storage.Storage;
 import org.newtco.obserra.graphql.client.types.Service;
 import org.newtco.obserra.graphql.client.types.ServiceInsights;
@@ -22,7 +21,7 @@ import org.slf4j.LoggerFactory;
  */
 @DgsComponent
 public class ServiceDataFetcher {
-    private static final Logger LOG = LoggerFactory.getLogger(ServiceDataFetcher.class);
+    private static final Logger log = LoggerFactory.getLogger(ServiceDataFetcher.class);
 
     private final Storage                         storage;
     private final List<ServiceInsightProvider<?>> insightProviders;
@@ -44,7 +43,7 @@ public class ServiceDataFetcher {
      */
     @DgsQuery
     public List<Service> services() {
-        LOG.debug("GraphQL query: services");
+        log.debug("GraphQL query: services");
         return storage.getAllServices().stream()
             .map(this::toService)
             .toList();
@@ -59,9 +58,10 @@ public class ServiceDataFetcher {
      */
     @DgsQuery
     public Service service(@InputArgument String id) {
-        LOG.debug("GraphQL query: service(id: {})", id);
-        Optional<ObService> service = storage.getService(id);
-        return service.map(this::toService).orElse(null);
+        log.debug("GraphQL query: service(id: {})", id);
+        return storage.getService(id)
+            .map(this::toService)
+            .orElse(null);
     }
 
     /**
@@ -94,7 +94,7 @@ public class ServiceDataFetcher {
             var insight = provider.provide(service);
             if (insight != null) {
                 Handles.forServiceInsightField(provider.insightType())
-                    .ifPresent(handle -> handle.set(insight));
+                    .ifPresent(handle -> handle.set(insights, insight));
             }
         }
 

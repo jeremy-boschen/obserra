@@ -1,9 +1,11 @@
-import org.gradle.kotlin.dsl.annotationProcessor
-
 plugins {
     java
     id("org.springframework.boot") version "3.4.6"
     id("io.spring.dependency-management") version "1.1.7"
+}
+
+repositories {
+    mavenCentral()
 }
 
 group = "org.newtco.obserra"
@@ -29,10 +31,6 @@ tasks.withType(JavaCompile::class.java).configureEach {
 }
 
 
-repositories {
-    mavenCentral()
-}
-
 val mockitoAgent: org.gradle.api.artifacts.Configuration by configurations.creating
 
 configurations {
@@ -56,7 +54,7 @@ dependencies {
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     // DGS generated Obserra types
-    implementation(project(":graphql"))
+    implementation(project(":obserra-graphql"))
 
     // Spring Boot starters
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -67,7 +65,6 @@ dependencies {
     // Database dependencies removed - using in-memory storage instead
 
     // GraphQL dependencies - Netflix DGS Framework
-    // https://mvnrepository.com/artifact/com.netflix.graphql.dgs/graphql-dgs-platform-dependencies
     implementation("com.netflix.graphql.dgs:graphql-dgs-spring-graphql-starter")
     implementation("com.netflix.graphql.dgs:graphql-dgs-extended-scalars")
 

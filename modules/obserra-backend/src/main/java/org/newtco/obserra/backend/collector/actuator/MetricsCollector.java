@@ -2,7 +2,7 @@ package org.newtco.obserra.backend.collector.actuator;
 
 import jakarta.annotation.Nonnull;
 
-import org.newtco.obserra.backend.collector.CollectionException;
+import org.newtco.obserra.backend.collector.CollectorException;
 import org.newtco.obserra.backend.collector.CollectorUtils;
 import org.newtco.obserra.backend.collector.config.CollectorConfig;
 import org.newtco.obserra.backend.collector.config.properties.SpringBootProperties.HealthProperties.MetricsProperties;
@@ -46,7 +46,7 @@ public class MetricsCollector implements ActuatorCollector<MetricsProperties> {
 
     @Nonnull
     @Override
-    public Class<?> type() {
+    public Class<?> collectedType() {
         return ObServiceMetrics.class;
     }
 
@@ -63,7 +63,7 @@ public class MetricsCollector implements ActuatorCollector<MetricsProperties> {
     }
 
     @Override
-    public boolean canCollect(ActuatorEndpoint endpoint) {
+    public boolean canCollectForEndpoint(ActuatorEndpoint endpoint) {
         return endpoint.getType().equals("metrics") || endpoint.getType().equals("obserra");
     }
 
@@ -96,7 +96,7 @@ public class MetricsCollector implements ActuatorCollector<MetricsProperties> {
 
         logger.debug("Insights check for service {} returned {}", service.getName(), data);
 
-        service.collectorData(type(), data);
+        service.updateCollectorData(collectedType(), data);
     }
 
     /**
@@ -144,7 +144,7 @@ public class MetricsCollector implements ActuatorCollector<MetricsProperties> {
             )
         );
 
-        service.collectorData(type(), data);
+        service.updateCollectorData(collectedType(), data);
     }
 
     private record QueryParam<T>(String name, T value) {
@@ -175,7 +175,7 @@ public class MetricsCollector implements ActuatorCollector<MetricsProperties> {
             logger.debug("Querying metrics endpoint at {} returned {}", uri, descriptor);
 
             return descriptor.getMeasurements().getFirst().getValue();
-        } catch (CollectionException e) {
+        } catch (CollectorException e) {
             logger.warn("Failed to collect metric {} for service {} from {}: {}",
                         metric, service.getName(), uri, e.getMessage(), e);
             return null;

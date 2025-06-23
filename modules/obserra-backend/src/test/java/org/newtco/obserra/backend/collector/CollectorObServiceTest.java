@@ -13,15 +13,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.newtco.obserra.backend.collector.CollectorServiceImpl.StateManager;
 import org.newtco.obserra.backend.collector.config.properties.CollectionProperties;
 import org.newtco.obserra.backend.collector.config.properties.KubernetesProperties;
 import org.newtco.obserra.backend.collector.config.properties.SpringBootProperties;
+import org.newtco.obserra.backend.collector.config.properties.SpringBootProperties.HealthProperties;
 import org.newtco.obserra.backend.collector.config.properties.SpringBootProperties.HealthProperties.LoggersProperties;
 import org.newtco.obserra.backend.collector.config.properties.SpringBootProperties.HealthProperties.MetricsProperties;
 import org.newtco.obserra.backend.config.properties.CircuitBreakerProperties;
 import org.newtco.obserra.backend.core.concurrent.RunnableTaskScope;
 import org.newtco.obserra.backend.core.concurrent.TaskScopeFactory;
-import org.newtco.obserra.backend.model.HealthData;
+import org.newtco.obserra.backend.model.HealthEndpointResponseV3;
 import org.newtco.obserra.backend.model.ObService;
 import org.newtco.obserra.backend.storage.Storage;
 import org.newtco.obserra.shared.model.ObServiceMetrics;
@@ -71,7 +73,7 @@ class CollectorObServiceTest {
             new CircuitBreakerProperties(), // circuitBreaker
 
             // Health
-            new SpringBootProperties.HealthProperties(
+            new HealthProperties(
                 true, // enabled
                 Duration.ofSeconds(2), // timeout
                 Duration.ofSeconds(10), // checkInterval
@@ -114,14 +116,14 @@ class CollectorObServiceTest {
         lenient().when(service2.getId()).thenReturn("service2-id");
 
         // Mock collectors with their properties
-        lenient().when(collector1.type()).thenReturn(HealthData.class);
+        lenient().when(collector1.collectedType()).thenAnswer(unused -> HealthEndpointResponseV3.class);
         lenient().when(collector1.properties()).thenReturn(springBootProps.health());
 
-        lenient().when(collector2.type()).thenReturn(ObServiceMetrics.class);
+        lenient().when(collector2.collectedType()).thenAnswer(unused -> ObServiceMetrics.class);
         lenient().when(collector2.properties()).thenReturn(springBootProps.metrics());
 
         // Create StateManager with the real CircuitBreakerProperties
-        stateManager = spy(new CollectorServiceImpl.StateManager(fixedClock, collectionProperties.springBoot().circuitBreaker()));
+        stateManager = spy(new StateManager(fixedClock, collectionProperties.springBoot().circuitBreaker()));
 
         // Create throttle with the configured max concurrent requests
         throttle = spy(new Semaphore(collectionProperties.maxConcurrentRequests()));

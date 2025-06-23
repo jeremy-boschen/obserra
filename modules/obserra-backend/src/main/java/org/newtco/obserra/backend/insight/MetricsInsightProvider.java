@@ -45,7 +45,7 @@ public class MetricsInsightProvider implements ServiceInsightProvider<MetricsIns
 
     @Override
     public MetricsInsight provide(ObService service) {
-        if (service.collectorData(insightType()) instanceof ObServiceMetrics metrics) {
+        if (service.getCollectorData(ObServiceMetrics.class) instanceof ObServiceMetrics metrics) {
             return new MetricsInsight(
                 toMemory(metrics),
                 toCPU(metrics),

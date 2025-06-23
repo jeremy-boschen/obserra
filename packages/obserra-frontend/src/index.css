@@ -3,13 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
+  --background: 210 16% 98%;
   --foreground: 20 14.3% 4.1%;
   --muted: 60 4.8% 95.9%;
   --muted-foreground: 25 5.3% 44.7%;
-  --popover: 0 0% 100%;
+  --popover: 210 16% 98%;
   --popover-foreground: 20 14.3% 4.1%;
-  --card: 0 0% 100%;
+  --card: 210 16% 98%;
   --card-foreground: 20 14.3% 4.1%;
   --border: 20 5.9% 90%;
   --input: 20 5.9% 90%;
@@ -40,7 +40,7 @@
   --error-600: 0 84% 50%;
 
   /* Sidebar colors */
-  --sidebar-background: 0 0% 100%;
+  --sidebar-background: 210 16% 98%;
   --sidebar-foreground: 20 14.3% 4.1%;
   --sidebar-primary: 207 90% 54%;
   --sidebar-primary-foreground: 211 100% 99%;

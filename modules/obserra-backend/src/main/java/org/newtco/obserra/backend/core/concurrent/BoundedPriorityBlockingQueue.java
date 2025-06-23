@@ -1,4 +1,4 @@
-package org.newtco.obserra.backend.util.concurrent;
+package org.newtco.obserra.backend.core.concurrent;
 
 import java.util.Collection;
 import java.util.Comparator;

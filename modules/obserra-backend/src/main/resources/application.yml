@@ -37,7 +37,7 @@ spring:
   jackson:
     serialization:
       write-dates-as-timestamps: false
-    date-format: yyyy-MM-dd'T'HH:mm:ss.SSSZ
+    date-format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
     default-property-inclusion: non_null
 
 # Actuator configuration
